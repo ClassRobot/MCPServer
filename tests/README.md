@@ -7,6 +7,12 @@
 - `test_cli.py`: 启动参数和运行入口
 - `test_config.py`: 配置加载与校验
 - `test_server.py`: 应用装配与基础能力烟雾测试
+- `test_browser_config.py`: 浏览器搜索 YAML 配置与环境变量覆盖
+- `test_bing_provider.py`: Bing 页面解析与广告候选识别
+- `test_search_cache.py`: 临时缓存命中、过期与清理
+- `test_search_results.py`: 广告过滤、去重与结果规范化
+- `test_browser_service.py`: 高层搜索编排与缓存降级
+- `test_browser_session.py`: 低层浏览器会话工具链
 
 ## 新测试怎么放
 

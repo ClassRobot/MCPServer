@@ -40,6 +40,9 @@ htmlcov/
 *.log
 *.pid
 *.seed
+runtime/
+playwright-report/
+test-results/
 
 # Editor and IDE files
 .idea/

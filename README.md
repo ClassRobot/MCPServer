@@ -9,6 +9,7 @@ conda env create -f environment.yml
 conda activate classbot-mcp
 $env:VIRTUAL_ENV = $env:CONDA_PREFIX
 uv sync --active
+uv run --active playwright install chromium
 uv run --active mcp-server
 ```
 
@@ -73,6 +74,8 @@ VIRTUAL_ENV=$env:CONDA_PREFIX
 .
 ├── docs/
 │   └── development.md
+├── config/
+│   └── browser_search.yaml
 ├── environment.yml
 ├── pyproject.toml
 ├── README.md
@@ -81,14 +84,24 @@ VIRTUAL_ENV=$env:CONDA_PREFIX
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── app.py
+│       ├── adapters/
 │       ├── config.py
+│       ├── schemas/
 │       ├── server.py
+│       ├── services/
 │       ├── prompts/
 │       ├── resources/
 │       └── tools/
 └── tests/
+    ├── fixtures/
+    ├── test_bing_provider.py
+    ├── test_browser_config.py
+    ├── test_browser_service.py
+    ├── test_browser_session.py
     ├── test_cli.py
     ├── test_config.py
+    ├── test_search_cache.py
+    ├── test_search_results.py
     └── test_server.py
 ```
 

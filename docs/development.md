@@ -38,6 +38,7 @@
 - `src/mcp_server/services/`: 业务流程、外部 API 调用、数据库访问
 - `src/mcp_server/schemas/`: 输入输出模型、共享数据结构
 - `src/mcp_server/adapters/`: 第三方系统适配器
+- `config/`: 项目级 YAML 配置文件
 
 ## 新功能放置规则
 
@@ -75,6 +76,7 @@
 conda activate classbot-mcp
 $env:VIRTUAL_ENV = $env:CONDA_PREFIX
 uv sync --active
+uv run --active playwright install chromium
 uv run --active ruff check .
 uv run --active ruff format .
 uv run --active pytest

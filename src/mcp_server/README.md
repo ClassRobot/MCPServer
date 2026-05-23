@@ -14,6 +14,9 @@
 4. [`tools/`](tools/README.md): MCP tools。
 5. [`resources/`](resources/README.md): MCP resources。
 6. [`prompts/`](prompts/README.md): MCP prompts。
+7. [`services/`](services/README.md): 业务流程与搜索编排。
+8. [`adapters/`](adapters/README.md): Playwright、缓存与 provider 适配。
+9. [`schemas/`](schemas/README.md): 跨层共享结构。
 
 ## 文件职责地图
 

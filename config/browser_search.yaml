@@ -1,0 +1,18 @@
+browser:
+  headless: true
+  timeout_ms: 15000
+  session_ttl_sec: 600
+  default_provider: bing
+  max_results: 5
+  user_agent:
+
+cache:
+  enabled: true
+  ttl_sec: 1800
+  base_dir: runtime/cache/browser-search
+  max_entries: 256
+
+filter:
+  ads_enabled: true
+  strict_natural_results_only: false
+
