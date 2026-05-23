@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-server"
+version = "0.1.0"
+description = "A Python MCP server scaffold managed with uv."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+]
+
+[project.scripts]
+mcp-server = "mcp_server.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "ruff>=0.11.0",
+    "setuptools>=82.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
