@@ -125,18 +125,14 @@ class ServerSettings:
 def load_server_settings() -> ServerSettings:
     """Load server settings from environment variables with validated defaults."""
     project_root = _resolve_project_root()
-    
+
     browser_search_config_path = _resolve_path_env(
-        "MCP_BROWSER_CONFIG_PATH", 
-        project_root / "config" / "browser_search.yaml",
-        project_root
+        "MCP_BROWSER_CONFIG_PATH", project_root / "config" / "browser_search.yaml", project_root
     )
     browser_search_config = _load_yaml_config(browser_search_config_path)
 
     logging_config_path = _resolve_path_env(
-        "MCP_LOGGING_CONFIG_PATH",
-        project_root / "config" / "logging.yaml",
-        project_root
+        "MCP_LOGGING_CONFIG_PATH", project_root / "config" / "logging.yaml", project_root
     )
     logging_config = _load_yaml_config(logging_config_path)
 
@@ -151,15 +147,9 @@ def load_server_settings() -> ServerSettings:
         browser_search_config_path=browser_search_config_path,
         logging_config_path=logging_config_path,
         render_output_dir=_resolve_path_env(
-            "MCP_RENDER_OUTPUT_DIR", 
-            Path("runtime/render"), 
-            project_root
+            "MCP_RENDER_OUTPUT_DIR", Path("runtime/render"), project_root
         ),
-        sessions_dir=_resolve_path_env(
-            "MCP_SESSIONS_DIR",
-            Path("runtime/sessions"),
-            project_root
-        ),
+        sessions_dir=_resolve_path_env("MCP_SESSIONS_DIR", Path("runtime/sessions"), project_root),
         browser_search=_load_browser_search_settings(browser_search_config, project_root),
         logging=_load_logging_settings(logging_config, project_root),
         database=_load_database_settings(),
@@ -201,7 +191,7 @@ def _resolve_path_env(env_name: str, default: Path, project_root: Path) -> Path:
         if default.is_absolute():
             return default
         return (project_root / default).resolve()
-    
+
     return _resolve_path(project_root, configured)
 
 

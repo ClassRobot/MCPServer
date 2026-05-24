@@ -37,4 +37,3 @@ class PersistedConfigItem:
     description: str | None
     created_at: str
     updated_at: str
-

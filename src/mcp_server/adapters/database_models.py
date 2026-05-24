@@ -75,4 +75,3 @@ class PersistedConfigItemModel(Base):
         default=_utcnow,
         onupdate=_utcnow,
     )
-

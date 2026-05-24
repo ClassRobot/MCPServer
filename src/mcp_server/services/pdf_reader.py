@@ -26,7 +26,7 @@ class PDFReadingService:
         """Get the total page count of a PDF file."""
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-        
+
         # Use pypdfium2 to quickly open and count pages
         with pdfium.PdfDocument(str(pdf_path)) as doc:
             return len(doc)
@@ -85,8 +85,7 @@ class PDFReadingService:
                 resolved_path = self._default_output_dir / resolved_path
         else:
             resolved_path = (
-                self._default_output_dir
-                / f"pdf_page_{uuid4().hex[:8]}_p{page_index + 1}.png"
+                self._default_output_dir / f"pdf_page_{uuid4().hex[:8]}_p{page_index + 1}.png"
             )
 
         resolved_path.parent.mkdir(parents=True, exist_ok=True)

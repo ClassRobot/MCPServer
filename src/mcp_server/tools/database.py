@@ -23,8 +23,7 @@ def register_database_tools(
     @mcp.tool(
         name="database_record_query",
         description=(
-            "Persist a query-history record in the configured database and return "
-            "the stored row."
+            "Persist a query-history record in the configured database and return the stored row."
         ),
         structured_output=True,
     )
@@ -45,9 +44,7 @@ def register_database_tools(
 
     @mcp.tool(
         name="database_list_query_history",
-        description=(
-            "Read the newest persisted query-history rows from the configured database."
-        ),
+        description=("Read the newest persisted query-history rows from the configured database."),
         structured_output=True,
     )
     @log_mcp_tool("database_list_query_history", logging_settings)

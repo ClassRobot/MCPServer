@@ -24,12 +24,12 @@ from .tools import register_tools
 def create_server(settings: ServerSettings | None = None) -> FastMCP:
     """Create and configure the FastMCP application."""
     active_settings = settings or load_server_settings()
-    
+
     # Infrastructure
     session_manager = BrowserSessionManager(active_settings.browser_search.browser)
     cache_store = SearchCacheStore(active_settings.browser_search.cache)
     database_manager = DatabaseManager(active_settings.database)
-    
+
     # Domain Services
     result_filter = SearchResultFilter(active_settings.browser_search.filter)
     browser_search_service = BrowserSearchService(
@@ -45,9 +45,7 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         default_output_dir=active_settings.render_output_dir,
     )
     query_history_service = QueryHistoryService(database_manager)
-    pdf_service = PDFReadingService(
-        default_output_dir=active_settings.render_output_dir
-    )
+    pdf_service = PDFReadingService(default_output_dir=active_settings.render_output_dir)
 
     @asynccontextmanager
     async def lifespan(_: FastMCP):

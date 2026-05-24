@@ -102,9 +102,7 @@ def test_alembic_upgrade_creates_initial_tables(
     monkeypatch.delenv("MCP_DATABASE_URL", raising=False)
     monkeypatch.delenv("MCP_DATABASE_ENABLED", raising=False)
 
-    alembic_config = Config(
-        str(Path(__file__).resolve().parents[1] / "alembic.ini")
-    )
+    alembic_config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
 
     command.upgrade(alembic_config, "head")
 
@@ -117,12 +115,11 @@ def test_alembic_upgrade_creates_initial_tables(
             "query_records",
             "task_execution_records",
         }
-        assert {
-            index["name"] for index in inspector.get_indexes("query_records")
-        } == {"ix_query_records_created_at", "ix_query_records_provider"}
-        assert {
-            index["name"] for index in inspector.get_indexes("task_execution_records")
-        } == {
+        assert {index["name"] for index in inspector.get_indexes("query_records")} == {
+            "ix_query_records_created_at",
+            "ix_query_records_provider",
+        }
+        assert {index["name"] for index in inspector.get_indexes("task_execution_records")} == {
             "ix_task_execution_records_created_at",
             "ix_task_execution_records_task_name",
         }

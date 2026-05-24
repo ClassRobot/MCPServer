@@ -36,10 +36,7 @@ class QueryHistoryRepository:
     async def list_recent(self, *, limit: int) -> list[QueryRecordModel]:
         """Return most-recent query history rows ordered by creation time."""
         statement = (
-            select(QueryRecordModel)
-            .order_by(QueryRecordModel.created_at.desc())
-            .limit(limit)
+            select(QueryRecordModel).order_by(QueryRecordModel.created_at.desc()).limit(limit)
         )
         result = await self._session.execute(statement)
         return list(result.scalars().all())
-

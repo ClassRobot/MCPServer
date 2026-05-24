@@ -26,9 +26,7 @@ def get_database_url() -> str:
     """Resolve the database URL from the shared application settings."""
     settings = load_server_settings()
     if settings.database.sqlalchemy_url is None:
-        raise RuntimeError(
-            "Alembic requires DATABASE_URL or MCP_DATABASE_URL to be configured."
-        )
+        raise RuntimeError("Alembic requires DATABASE_URL or MCP_DATABASE_URL to be configured.")
     return settings.database.sqlalchemy_url
 
 

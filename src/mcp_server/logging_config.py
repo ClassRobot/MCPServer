@@ -42,7 +42,7 @@ class KeyValueFormatter(logging.Formatter):
         timestamp = datetime.fromtimestamp(record.created).strftime("%m-%d %H:%M:%S")
         level_name = f"[{record.levelname}]"
         level_color = _LEVEL_COLORS.get(record.levelname)
-        
+
         short_name = record.name.split(".")[0]
         header_parts = [
             self._color(timestamp, level_color),
@@ -70,7 +70,7 @@ class KeyValueFormatter(logging.Formatter):
 
         body = " ".join(body_parts)
         formatted = f"{header} | {body}" if body else header
-        
+
         if record.exc_info:
             formatted = f"{formatted}\n{self.formatException(record.exc_info)}"
         return formatted

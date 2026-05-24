@@ -127,10 +127,7 @@ def test_configure_logging_writes_stderr_and_file(
 
     assert captured.out == ""
     assert "\x1b[" in captured.err
-    assert (
-        "[INFO] mcp_server | event=test.event sample=\"hello world\""
-        in strip_ansi(captured.err)
-    )
+    assert '[INFO] mcp_server | event=test.event sample="hello world"' in strip_ansi(captured.err)
     assert "\x1b[" not in file_logs
     assert "event=test.event" in file_logs
 

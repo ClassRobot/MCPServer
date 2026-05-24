@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+import pytest
 
 from mcp_server.adapters.search_cache import SearchCacheStore
 from mcp_server.config import BrowserSettings, SearchCacheSettings, SearchFilterSettings
@@ -54,9 +54,6 @@ class FakeProvider:
                 source="openai.com",
             ),
         ]
-
-
-import pytest
 
 
 @pytest.mark.asyncio

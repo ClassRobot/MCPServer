@@ -15,9 +15,10 @@ async def test_pdf_get_page_count() -> None:
     """Test getting page count from a mock PDF."""
     service = PDFReadingService(default_output_dir=Path("runtime/test_render"))
 
-    with patch("pypdfium2.PdfDocument") as mock_doc_class, patch(
-        "pathlib.Path.exists"
-    ) as mock_exists:
+    with (
+        patch("pypdfium2.PdfDocument") as mock_doc_class,
+        patch("pathlib.Path.exists") as mock_exists,
+    ):
         mock_exists.return_value = True
         mock_doc = MagicMock()
         mock_doc.__enter__.return_value = mock_doc
@@ -34,9 +35,7 @@ async def test_pdf_extract_text() -> None:
     """Test extracting structure-preserving plain text from mock PDF pages."""
     service = PDFReadingService(default_output_dir=Path("runtime/test_render"))
 
-    with patch("pypdf.PdfReader") as mock_reader_class, patch(
-        "pathlib.Path.exists"
-    ) as mock_exists:
+    with patch("pypdf.PdfReader") as mock_reader_class, patch("pathlib.Path.exists") as mock_exists:
         mock_exists.return_value = True
         mock_reader = MagicMock()
         mock_page = MagicMock()
@@ -59,9 +58,11 @@ async def test_pdf_render_page() -> None:
     """Test rendering page visual snapshot mock."""
     service = PDFReadingService(default_output_dir=Path("runtime/test_render"))
 
-    with patch("pypdfium2.PdfDocument") as mock_doc_class, patch(
-        "pathlib.Path.exists"
-    ) as mock_exists, patch("pathlib.Path.write_bytes") as mock_write:
+    with (
+        patch("pypdfium2.PdfDocument") as mock_doc_class,
+        patch("pathlib.Path.exists") as mock_exists,
+        patch("pathlib.Path.write_bytes") as mock_write,
+    ):
         mock_exists.return_value = True
         mock_doc = MagicMock()
         mock_doc.__enter__.return_value = mock_doc
