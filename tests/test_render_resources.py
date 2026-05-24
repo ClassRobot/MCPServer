@@ -37,6 +37,9 @@ async def test_read_render_resource_directory_traversal_prevention(tmp_path: Pat
     with pytest.raises(ValueError, match="Directory traversal attempt detected."):
         await mcp.read_resource("render://..\\test_logging.py")
 
+    with pytest.raises(ValueError, match="Directory traversal attempt detected."):
+        await mcp.read_resource("render://%2e%2e%2ftest_logging.py")
+
     with pytest.raises(ValueError, match="Unknown resource:"):
         await mcp.read_resource("render:///absolute/path/to/some/file.png")
 
