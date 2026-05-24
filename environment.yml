@@ -1,7 +1,6 @@
-name: mcp-server
+name: classbot-mcp
 channels:
   - defaults
 dependencies:
   - python=3.13
   - pip
-

@@ -50,7 +50,11 @@ class BrowserSessionManager:
         self._sessions: dict[str, ManagedBrowserSession] = {}
         self._lock = asyncio.Lock()
 
-    async def create_session(self, headless: bool | None = None) -> BrowserSessionInfo:
+    async def create_session(
+        self,
+        headless: bool | None = None,
+        storage_state_path: str | None = None,
+    ) -> BrowserSessionInfo:
         """Create a new browser session and return its public metadata."""
         await self._cleanup_expired_sessions()
         playwright = await self._ensure_playwright()
@@ -60,6 +64,8 @@ class BrowserSessionManager:
             context_kwargs: dict[str, Any] = {}
             if self._settings.user_agent is not None:
                 context_kwargs["user_agent"] = self._settings.user_agent
+            if storage_state_path is not None:
+                context_kwargs["storage_state"] = storage_state_path
             context = await browser.new_context(**context_kwargs)
             try:
                 page = await context.new_page()
@@ -193,6 +199,13 @@ class BrowserSessionManager:
         await session.browser.close()
         return {"session_id": session_id, "closed": True}
 
+    async def save_storage_state(self, session_id: str, dest_path: str) -> None:
+        """Save the storage state (cookies, localStorage) of a session to disk."""
+        session = self._sessions.get(session_id)
+        if session is None:
+            raise RuntimeError(f"Browser session {session_id!r} does not exist or has expired.")
+        await session.context.storage_state(path=dest_path)
+
     async def close_all(self) -> None:
         """Close all live sessions and stop Playwright."""
         session_ids = list(self._sessions)
@@ -220,7 +233,8 @@ class BrowserSessionManager:
     async def _cleanup_expired_sessions(self) -> None:
         """Close sessions whose TTL has elapsed."""
         async with self._lock:
-            expiration_cutoff = datetime.now(UTC) - timedelta(seconds=self._settings.session_ttl_sec)
+            session_ttl = self._settings.session_ttl_sec
+            expiration_cutoff = datetime.now(UTC) - timedelta(seconds=session_ttl)
             expired_ids = [
                 session_id
                 for session_id, session in self._sessions.items()

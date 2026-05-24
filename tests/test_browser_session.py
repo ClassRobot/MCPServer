@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+import pytest
 
 from mcp_server.adapters.browser_session import BrowserSessionManager
 from mcp_server.config import BrowserSettings
@@ -96,9 +96,6 @@ class FakePlaywright:
 
     async def stop(self) -> None:
         self.stopped = True
-
-
-import pytest
 
 
 @pytest.mark.asyncio

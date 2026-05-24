@@ -1,0 +1,14 @@
+level: INFO
+
+console:
+  enabled: true
+  color: true
+
+file:
+  enabled: true
+  path: runtime/logs/mcp-server.log
+  retention_days: 14
+
+tool:
+  args_enabled: false
+  max_field_length: 160

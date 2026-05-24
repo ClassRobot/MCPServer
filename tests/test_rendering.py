@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
+
+import pytest
 
 from mcp_server.adapters.browser_session import BrowserSessionManager
 from mcp_server.config import BrowserSettings
@@ -80,9 +81,6 @@ class FakePlaywright:
         pass
 
 
-import pytest
-
-
 @pytest.mark.asyncio
 async def test_rendering_service_html_and_markdown(tmp_path: Path) -> None:
     # Setup session manager with fake playwright
@@ -132,3 +130,40 @@ async def test_rendering_service_html_and_markdown(tmp_path: Path) -> None:
     assert "Some content." in fake_page.html_content
     assert "#0d1117" in fake_page.html_content  # dark background color should be in style
 
+
+@pytest.mark.asyncio
+async def test_rendering_service_chart(tmp_path: Path) -> None:
+    # Setup session manager with fake playwright
+    manager = BrowserSessionManager(BrowserSettings())
+    fake_page = FakePage()
+    fake_context = FakeContext(fake_page)
+    fake_browser = FakeBrowser(fake_context)
+    fake_playwright = FakePlaywright(FakeChromium(fake_browser))
+    manager._playwright = fake_playwright
+
+    service = ContentRenderingService(
+        session_manager=manager,
+        default_output_dir=tmp_path / "render",
+    )
+
+    data = {
+        "labels": ["Mon", "Tue", "Wed"],
+        "datasets": [{"label": "Revenue", "data": [120, 200, 150]}],
+    }
+
+    result = await service.render_chart(
+        chart_type="line",
+        data=data,
+        title="Weekly Revenue",
+        theme="dark",
+        width=800,
+        height=600,
+        output_path="test_chart.png",
+    )
+
+    assert Path(result.file_path).name == "test_chart.png"
+    assert result.width == 800
+    assert result.height == 600
+    assert "Weekly Revenue" in fake_page.html_content
+    assert "echarts" in fake_page.html_content
+    assert "animation" in fake_page.html_content

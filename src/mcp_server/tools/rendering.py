@@ -7,13 +7,16 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+from mcp_server.config import LoggingSettings
 from mcp_server.services.rendering import ContentRenderingService
+from mcp_server.tool_logging import log_mcp_tool
 
 
 def register_rendering_tools(
     mcp: FastMCP,
     *,
     rendering_service: ContentRenderingService,
+    logging_settings: LoggingSettings,
 ) -> None:
     """Register HTML and Markdown image rendering tools."""
 
@@ -25,6 +28,7 @@ def register_rendering_tools(
         ),
         structured_output=True,
     )
+    @log_mcp_tool("render_content_to_image", logging_settings)
     async def render_content_to_image(
         content: str,
         input_format: Literal["html", "markdown"],
@@ -56,6 +60,49 @@ def register_rendering_tools(
         result = await rendering_service.render(
             content=content,
             input_format=input_format,
+            theme=theme,
+            width=width,
+            height=height,
+            output_path=output_path,
+        )
+        return asdict(result)
+
+    @mcp.tool(
+        name="render_data_chart",
+        description=(
+            "Generate a beautiful data chart (line, bar, pie, radar, scatter) as a PNG image "
+            "using Apache ECharts. High-fidelity dynamic styling included."
+        ),
+        structured_output=True,
+    )
+    @log_mcp_tool("render_data_chart", logging_settings)
+    async def render_data_chart(
+        chart_type: Literal["line", "bar", "pie", "radar", "scatter"],
+        data: dict[str, Any],
+        title: str | None = None,
+        theme: Literal["light", "dark"] = "light",
+        width: int = 800,
+        height: int = 600,
+        output_path: str | None = None,
+    ) -> dict[str, Any]:
+        """Convert a structured data payload into an exquisite ECharts visualization snapshot.
+
+        Args:
+            chart_type: The visualization form, one of 'line', 'bar', 'pie', 'radar', 'scatter'.
+            data: Standard data dict containing:
+                - labels: list of strings (x-axis category labels or indicator keys)
+                - datasets: list of objects with 'label' (name) and 'data' (values)
+                - ECharts custom configuration under the special "option" key overrides all mapping.
+            title: The title text rendered at the top center of the chart.
+            theme: The visual aesthetic theme, either 'light' or 'dark'. Defaults to 'light'.
+            width: Viewport rendering width in pixels. Defaults to 800.
+            height: Viewport rendering height in pixels. Defaults to 600.
+            output_path: Optional exact path to save the output PNG file.
+        """
+        result = await rendering_service.render_chart(
+            chart_type=chart_type,
+            data=data,
+            title=title,
             theme=theme,
             width=width,
             height=height,

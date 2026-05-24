@@ -15,4 +15,3 @@ cache:
 filter:
   ads_enabled: true
   strict_natural_results_only: false
-

@@ -12,6 +12,7 @@
 - **业务编排与逻辑**:
   - `test_browser_config.py`: 浏览器配置文件与环境变量覆盖校验。
   - `test_browser_service.py`: 搜索高层流程编排与缓存降级。
+  - `test_database.py`: 数据库配置、迁移与查询历史服务闭环验证。
   - `test_search_results.py`: 搜索结果重组、去重与广告过滤。
 - **底层适配与缓存**:
   - `test_browser_session.py`: Playwright 浏览器生命周期与页面提取。
@@ -27,4 +28,3 @@
 ```bash
 uv run pytest
 ```
-

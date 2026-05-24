@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from collections.abc import Sequence
 from dataclasses import replace
 
 from .app import create_server
 from .config import ServerSettings, TransportName, load_server_settings
+from .logging_config import configure_logging, log_event
+
+LOGGER = logging.getLogger(__name__)
 
 
 def parse_args(
@@ -40,9 +44,18 @@ def parse_args(
 def main(argv: Sequence[str] | None = None) -> None:
     """Run the MCP server using the selected transport."""
     base_settings = load_server_settings()
+    configure_logging(base_settings.logging)
     args = parse_args(argv=argv, default_settings=base_settings)
     server = create_server(replace(base_settings, host=args.host, port=args.port))
     transport: TransportName = args.transport
+    log_event(
+        LOGGER,
+        logging.INFO,
+        "server.run",
+        transport=transport,
+        host=args.host,
+        port=args.port,
+    )
 
     if transport == "stdio":
         server.run()

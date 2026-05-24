@@ -29,7 +29,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MCP_SERVER_PORT=8000 \
     MCP_PROJECT_ROOT=/app \
     MCP_BROWSER_CONFIG_PATH=/app/config/browser_search.yaml \
-    MCP_BROWSER_CACHE_BASE_DIR=/data/cache/browser-search
+    MCP_BROWSER_CACHE_BASE_DIR=/data/cache/browser-search \
+    MCP_LOG_FILE_PATH=/data/logs/mcp-server.log
 
 WORKDIR /app
 
@@ -44,7 +45,7 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
     && playwright install --with-deps chromium \
     && groupadd --system appgroup \
     && useradd --system --gid appgroup --create-home --home-dir /home/appuser appuser \
-    && mkdir -p /data/cache/browser-search /ms-playwright \
+    && mkdir -p /data/cache/browser-search /data/logs /ms-playwright \
     && chown -R appuser:appgroup /app /data /ms-playwright /opt/venv
 
 USER appuser

@@ -8,11 +8,14 @@ from mcp.server.fastmcp import FastMCP
 
 from .adapters.bing_provider import BingSearchProvider
 from .adapters.browser_session import BrowserSessionManager
+from .adapters.database import DatabaseManager
 from .adapters.search_cache import SearchCacheStore
 from .config import ServerSettings, load_server_settings
 from .prompts import register_prompts
 from .resources import register_resources
 from .services.browser_search import BrowserSearchService
+from .services.pdf_reader import PDFReadingService
+from .services.query_history import QueryHistoryService
 from .services.rendering import ContentRenderingService
 from .services.search_results import SearchResultFilter
 from .tools import register_tools
@@ -21,8 +24,13 @@ from .tools import register_tools
 def create_server(settings: ServerSettings | None = None) -> FastMCP:
     """Create and configure the FastMCP application."""
     active_settings = settings or load_server_settings()
+    
+    # Infrastructure
     session_manager = BrowserSessionManager(active_settings.browser_search.browser)
     cache_store = SearchCacheStore(active_settings.browser_search.cache)
+    database_manager = DatabaseManager(active_settings.database)
+    
+    # Domain Services
     result_filter = SearchResultFilter(active_settings.browser_search.filter)
     browser_search_service = BrowserSearchService(
         session_manager=session_manager,
@@ -36,12 +44,18 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         session_manager=session_manager,
         default_output_dir=active_settings.render_output_dir,
     )
+    query_history_service = QueryHistoryService(database_manager)
+    pdf_service = PDFReadingService(
+        default_output_dir=active_settings.render_output_dir
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastMCP):
         try:
+            await database_manager.initialize()
             yield
         finally:
+            await database_manager.dispose()
             await session_manager.close_all()
 
     mcp = FastMCP(
@@ -61,7 +75,9 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         settings=active_settings,
         browser_search_service=browser_search_service,
         session_manager=session_manager,
+        query_history_service=query_history_service,
         rendering_service=rendering_service,
+        pdf_service=pdf_service,
     )
     register_resources(mcp)
     register_prompts(mcp)

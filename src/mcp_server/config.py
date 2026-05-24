@@ -11,6 +11,7 @@ import yaml
 
 TransportName = Literal["stdio", "sse", "streamable-http"]
 ProviderName = Literal["bing"]
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
 DEFAULT_SERVER_NAME = "MCP Server"
 DEFAULT_SERVER_INSTRUCTIONS = (
@@ -19,9 +20,13 @@ DEFAULT_SERVER_INSTRUCTIONS = (
 )
 DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BROWSER_CONFIG_PATH = DEFAULT_PROJECT_ROOT / "config" / "browser_search.yaml"
+DEFAULT_LOGGING_CONFIG_PATH = DEFAULT_PROJECT_ROOT / "config" / "logging.yaml"
+
 DEFAULT_RUNTIME_ROOT = DEFAULT_PROJECT_ROOT / "runtime"
 DEFAULT_CACHE_BASE_DIR = DEFAULT_RUNTIME_ROOT / "cache" / "browser-search"
 DEFAULT_RENDER_OUTPUT_DIR = DEFAULT_RUNTIME_ROOT / "render"
+DEFAULT_LOG_PATH = DEFAULT_RUNTIME_ROOT / "logs" / "mcp-server.log"
+DEFAULT_SESSIONS_DIR = DEFAULT_RUNTIME_ROOT / "sessions"
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +69,38 @@ class BrowserSearchSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class LoggingSettings:
+    """Settings for terminal and file-based structured logging."""
+
+    level: str = "INFO"
+    console_enabled: bool = True
+    console_color_enabled: bool = True
+    file_enabled: bool = True
+    file_path: Path = DEFAULT_LOG_PATH
+    retention_days: int = 14
+    tool_args_enabled: bool = False
+    max_field_length: int = 100
+
+
+@dataclass(frozen=True, slots=True)
+class DatabaseSettings:
+    """Settings for the persistence layer (optional SQL history)."""
+
+    enabled: bool = False
+    sqlalchemy_url: str | None = None
+    echo: bool = False
+    pool_size: int = 5
+    max_overflow: int = 10
+
+    def __post_init__(self) -> None:
+        """Ensure the database URL uses an async driver if provided."""
+        if self.sqlalchemy_url:
+            normalized = _normalize_sqlalchemy_url(self.sqlalchemy_url)
+            if normalized != self.sqlalchemy_url:
+                object.__setattr__(self, "sqlalchemy_url", normalized)
+
+
+@dataclass(frozen=True, slots=True)
 class ServerSettings:
     """Stable server settings shared by the CLI and application factory."""
 
@@ -77,15 +114,31 @@ class ServerSettings:
     stateless_http: bool = True
     project_root: Path = DEFAULT_PROJECT_ROOT
     browser_search_config_path: Path = DEFAULT_BROWSER_CONFIG_PATH
+    logging_config_path: Path = DEFAULT_LOGGING_CONFIG_PATH
     render_output_dir: Path = DEFAULT_RENDER_OUTPUT_DIR
+    sessions_dir: Path = DEFAULT_SESSIONS_DIR
     browser_search: BrowserSearchSettings = field(default_factory=BrowserSearchSettings)
+    logging: LoggingSettings = field(default_factory=LoggingSettings)
+    database: DatabaseSettings = field(default_factory=DatabaseSettings)
 
 
 def load_server_settings() -> ServerSettings:
     """Load server settings from environment variables with validated defaults."""
     project_root = _resolve_project_root()
-    browser_search_config_path = _resolve_browser_search_config_path(project_root)
+    
+    browser_search_config_path = _resolve_path_env(
+        "MCP_BROWSER_CONFIG_PATH", 
+        project_root / "config" / "browser_search.yaml",
+        project_root
+    )
     browser_search_config = _load_yaml_config(browser_search_config_path)
+
+    logging_config_path = _resolve_path_env(
+        "MCP_LOGGING_CONFIG_PATH",
+        project_root / "config" / "logging.yaml",
+        project_root
+    )
+    logging_config = _load_yaml_config(logging_config_path)
 
     return ServerSettings(
         name=os.getenv("MCP_SERVER_NAME", DEFAULT_SERVER_NAME),
@@ -96,8 +149,20 @@ def load_server_settings() -> ServerSettings:
         streamable_http_path=os.getenv("MCP_SERVER_STREAMABLE_HTTP_PATH", "/mcp"),
         project_root=project_root,
         browser_search_config_path=browser_search_config_path,
-        render_output_dir=_resolve_path(project_root, os.getenv("MCP_RENDER_OUTPUT_DIR", "runtime/render")),
+        logging_config_path=logging_config_path,
+        render_output_dir=_resolve_path_env(
+            "MCP_RENDER_OUTPUT_DIR", 
+            Path("runtime/render"), 
+            project_root
+        ),
+        sessions_dir=_resolve_path_env(
+            "MCP_SESSIONS_DIR",
+            Path("runtime/sessions"),
+            project_root
+        ),
         browser_search=_load_browser_search_settings(browser_search_config, project_root),
+        logging=_load_logging_settings(logging_config, project_root),
+        database=_load_database_settings(),
     )
 
 
@@ -129,17 +194,19 @@ def _resolve_project_root() -> Path:
     return resolved_root
 
 
-def _resolve_browser_search_config_path(project_root: Path) -> Path:
-    """Resolve the YAML config path for browser search settings."""
-    configured_path = os.getenv("MCP_BROWSER_CONFIG_PATH")
-    if configured_path is None:
-        return project_root / "config" / "browser_search.yaml"
-
-    return _resolve_path(project_root, configured_path)
+def _resolve_path_env(env_name: str, default: Path, project_root: Path) -> Path:
+    """Resolve a path from an environment variable or a default."""
+    configured = os.getenv(env_name)
+    if configured is None:
+        if default.is_absolute():
+            return default
+        return (project_root / default).resolve()
+    
+    return _resolve_path(project_root, configured)
 
 
 def _load_yaml_config(config_path: Path) -> dict[str, object]:
-    """Load structured browser search configuration from YAML if it exists."""
+    """Load structured configuration from YAML if it exists."""
     if not config_path.exists():
         return {}
 
@@ -147,7 +214,7 @@ def _load_yaml_config(config_path: Path) -> dict[str, object]:
         loaded = yaml.safe_load(config_file) or {}
 
     if not isinstance(loaded, dict):
-        raise ValueError(f"Browser config must be a mapping, got {type(loaded).__name__}.")
+        raise ValueError(f"Config file {config_path} must be a mapping.")
     return loaded
 
 
@@ -229,6 +296,95 @@ def _load_browser_search_settings(
             ),
         ),
     )
+
+
+def _load_logging_settings(
+    config_data: dict[str, object],
+    project_root: Path,
+) -> LoggingSettings:
+    """Merge logging settings from YAML and environment variables."""
+    console_config = _read_mapping(config_data, "console")
+    file_config = _read_mapping(config_data, "file")
+    tool_config = _read_mapping(config_data, "tool")
+
+    level = _read_optional_string_setting(
+        env_name="MCP_LOG_LEVEL",
+        config_value=config_data.get("level"),
+        default="INFO",
+    ).upper()
+    if level not in VALID_LOG_LEVELS:
+        raise ValueError(f"MCP_LOG_LEVEL must be one of {VALID_LOG_LEVELS}, got {level!r}.")
+
+    return LoggingSettings(
+        level=level,
+        console_enabled=_read_bool_setting(
+            env_name="MCP_LOG_CONSOLE_ENABLED",
+            config_value=console_config.get("enabled"),
+            default=True,
+        ),
+        console_color_enabled=_read_bool_setting(
+            env_name="MCP_LOG_CONSOLE_COLOR",
+            config_value=console_config.get("color"),
+            default=True,
+        ),
+        file_enabled=_read_bool_setting(
+            env_name="MCP_LOG_FILE_ENABLED",
+            config_value=file_config.get("enabled"),
+            default=True,
+        ),
+        file_path=_read_path_setting(
+            env_name="MCP_LOG_FILE_PATH",
+            config_value=file_config.get("path"),
+            default=project_root / "runtime" / "logs" / "mcp-server.log",
+            project_root=project_root,
+        ),
+        retention_days=_read_positive_int_setting(
+            env_name="MCP_LOG_RETENTION_DAYS",
+            config_value=file_config.get("retention_days"),
+            default=14,
+        ),
+        tool_args_enabled=_read_bool_setting(
+            env_name="MCP_LOG_TOOL_ARGS",
+            config_value=tool_config.get("args_enabled"),
+            default=False,
+        ),
+        max_field_length=_read_positive_int_setting(
+            env_name="MCP_LOG_MAX_FIELD_LENGTH",
+            config_value=tool_config.get("max_field_length"),
+            default=100,
+        ),
+    )
+
+
+def _load_database_settings() -> DatabaseSettings:
+    """Load database settings exclusively from environment variables."""
+    enabled = _read_bool_setting("MCP_DATABASE_ENABLED", None, False)
+    raw_url = os.getenv("MCP_DATABASE_URL") or os.getenv("DATABASE_URL")
+
+    if enabled and not raw_url:
+        raise ValueError("MCP_DATABASE_ENABLED is true but no DATABASE_URL is set.")
+
+    sqlalchemy_url = None
+    if raw_url:
+        enabled = True  # Auto-enable if URL is provided
+        sqlalchemy_url = _normalize_sqlalchemy_url(raw_url)
+
+    return DatabaseSettings(
+        enabled=enabled,
+        sqlalchemy_url=sqlalchemy_url,
+        echo=_read_bool_setting("MCP_DATABASE_ECHO", None, False),
+        pool_size=_read_positive_int_setting("MCP_DATABASE_POOL_SIZE", None, 5),
+        max_overflow=_read_positive_int_setting("MCP_DATABASE_MAX_OVERFLOW", None, 10),
+    )
+
+
+def _normalize_sqlalchemy_url(url: str) -> str:
+    """Ensure the database URL uses an async driver."""
+    if url.startswith("sqlite://"):
+        return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
 
 
 def _read_mapping(config_data: dict[str, object], key: str) -> dict[str, object]:

@@ -8,4 +8,3 @@
 
 ## 主包入口
 - **[`mcp_server/`](mcp_server/README.md)**: 项目的核心 Python 包，承载服务装配、多层业务逻辑及接口定义。
-

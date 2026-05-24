@@ -15,6 +15,7 @@ from .browser import (
     RawSearchResult,
     SearchResult,
 )
+from .database import PersistedConfigItem, QueryRecord, TaskExecutionRecord
 from .rendering import RenderImageResult
 
 __all__ = [
@@ -22,7 +23,10 @@ __all__ = [
     "BrowserExtractResult",
     "BrowserSearchResponse",
     "BrowserSessionInfo",
+    "PersistedConfigItem",
+    "QueryRecord",
     "RawSearchResult",
     "SearchResult",
+    "TaskExecutionRecord",
     "RenderImageResult",
 ]

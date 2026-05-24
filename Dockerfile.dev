@@ -1,0 +1,39 @@
+ARG PYTHON_IMAGE=python:3.13-slim-bookworm
+FROM ${PYTHON_IMAGE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH="/opt/venv/bin:$PATH" \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    WATCHFILES_FORCE_POLLING=true \
+    MCP_SERVER_HOST=0.0.0.0 \
+    MCP_SERVER_PORT=8000 \
+    MCP_PROJECT_ROOT=/workspace \
+    MCP_BROWSER_CONFIG_PATH=/workspace/config/browser_search.yaml \
+    MCP_BROWSER_CACHE_BASE_DIR=/data/cache/browser-search \
+    MCP_LOG_FILE_PATH=/data/logs/mcp-server.log
+
+WORKDIR /workspace
+
+COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /bin/
+
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --locked --all-groups --no-install-project
+
+COPY . .
+RUN uv sync --locked --all-groups \
+    && sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+    && uv run --no-sync playwright install --with-deps chromium \
+    && groupadd --system appgroup \
+    && useradd --system --gid appgroup --create-home --home-dir /home/appuser appuser \
+    && mkdir -p /data/cache/browser-search /data/logs /ms-playwright /opt/venv \
+    && chown -R appuser:appgroup /workspace /data /ms-playwright /opt/venv
+
+USER appuser
+
+EXPOSE 8000
+VOLUME ["/data"]
+
+CMD ["sh", "-c", "uv sync --frozen --all-groups && uv run --no-sync mcp-server --transport streamable-http --host \"${MCP_SERVER_HOST:-0.0.0.0}\" --port \"${MCP_SERVER_PORT:-8000}\""]

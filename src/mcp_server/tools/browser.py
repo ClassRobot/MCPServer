@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp_server.adapters.browser_session import BrowserSessionManager
 from mcp_server.config import ServerSettings
 from mcp_server.services.browser_search import BrowserSearchService
+from mcp_server.tool_logging import log_mcp_tool
 
 
 def register_browser_tools(
@@ -24,11 +25,11 @@ def register_browser_tools(
     @mcp.tool(
         name="browser_search",
         description=(
-            "Run a browser-driven search on public search pages and return "
-            "structured results."
+            "Run a browser-driven search on public search pages and return structured results."
         ),
         structured_output=True,
     )
+    @log_mcp_tool("browser_search", settings.logging)
     async def browser_search(
         query: str,
         provider: str = "bing",
@@ -51,11 +52,34 @@ def register_browser_tools(
 
     @mcp.tool(
         name="browser_create_session",
-        description="Create a reusable browser session for low-level page operations.",
+        description=(
+            "Create a reusable browser session for low-level page operations. "
+            "Supports loading from a previously saved storage state (state_name)."
+        ),
         structured_output=True,
     )
-    async def browser_create_session(headless: bool | None = None) -> dict[str, Any]:
-        session_info = await session_manager.create_session(headless=headless)
+    @log_mcp_tool("browser_create_session", settings.logging)
+    async def browser_create_session(
+        headless: bool | None = None,
+        state_name: str | None = None,
+    ) -> dict[str, Any]:
+        storage_state_path = None
+        if state_name:
+            import re
+
+            if not re.match(r"^[a-zA-Z0-9_-]+$", state_name):
+                raise ValueError(
+                    "Invalid state_name. Use only letters, numbers, underscores, and hyphens."
+                )
+
+            state_file = settings.sessions_dir / f"{state_name}.json"
+            if state_file.exists():
+                storage_state_path = str(state_file)
+
+        session_info = await session_manager.create_session(
+            headless=headless,
+            storage_state_path=storage_state_path,
+        )
         return asdict(session_info)
 
     @mcp.tool(
@@ -63,6 +87,7 @@ def register_browser_tools(
         description="Open a URL inside an existing browser session.",
         structured_output=True,
     )
+    @log_mcp_tool("browser_open", settings.logging)
     async def browser_open(session_id: str, url: str) -> dict[str, Any]:
         return await session_manager.open(session_id, url)
 
@@ -71,6 +96,7 @@ def register_browser_tools(
         description="Fill an input field inside an existing browser session.",
         structured_output=True,
     )
+    @log_mcp_tool("browser_fill", settings.logging)
     async def browser_fill(
         session_id: str,
         selector: str,
@@ -84,6 +110,7 @@ def register_browser_tools(
         description="Click an element inside an existing browser session.",
         structured_output=True,
     )
+    @log_mcp_tool("browser_click", settings.logging)
     async def browser_click(
         session_id: str,
         selector: str,
@@ -100,6 +127,7 @@ def register_browser_tools(
         description="Extract text and optional links from the current browser page.",
         structured_output=True,
     )
+    @log_mcp_tool("browser_extract", settings.logging)
     async def browser_extract(
         session_id: str,
         selector: str | None = None,
@@ -119,5 +147,117 @@ def register_browser_tools(
         description="Close an existing browser session.",
         structured_output=True,
     )
+    @log_mcp_tool("browser_close_session", settings.logging)
     async def browser_close_session(session_id: str) -> dict[str, Any]:
         return await session_manager.close_session(session_id)
+
+    @mcp.tool(
+        name="browser_save_session_state",
+        description="Save the storage state (cookies, localStorage) of an active session to disk.",
+        structured_output=True,
+    )
+    @log_mcp_tool("browser_save_session_state", settings.logging)
+    async def browser_save_session_state(
+        session_id: str,
+        state_name: str,
+    ) -> dict[str, Any]:
+        import re
+
+        if not re.match(r"^[a-zA-Z0-9_-]+$", state_name):
+            raise ValueError(
+                "Invalid state_name. Use only letters, numbers, underscores, and hyphens."
+            )
+
+        settings.sessions_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = settings.sessions_dir / f"{state_name}.json"
+
+        await session_manager.save_storage_state(session_id, str(dest_path))
+        return {
+            "session_id": session_id,
+            "state_name": state_name,
+            "saved_path": str(dest_path),
+            "success": True,
+        }
+
+    @mcp.tool(
+        name="browser_screenshot_url",
+        description=(
+            "Capture a high-quality visual screenshot of a given URL. "
+            "Supports rendering either a specific height or full scrollable height."
+        ),
+        structured_output=True,
+    )
+    @log_mcp_tool("browser_screenshot_url", settings.logging)
+    async def browser_screenshot_url(
+        url: str,
+        width: int = 1200,
+        height: int | None = None,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Capture a visual screen snapshot of any webpage.
+
+        Args:
+            url: The target page URL to capture.
+            width: Viewport width in pixels. Defaults to 1200.
+            height: Viewport height in pixels. If None, auto-scrolls to capture the full page.
+            session_id: Optional reusable session ID to execute the capture in
+                (for logged-in states).
+        """
+        import base64
+        from uuid import uuid4
+
+        is_temp_session = False
+        active_session_id = session_id
+
+        if not active_session_id:
+            session_info = await session_manager.create_session(headless=True)
+            active_session_id = session_info.session_id
+            is_temp_session = True
+
+        try:
+            page = await session_manager.get_page(active_session_id)
+
+            initial_height = height if height is not None else 800
+            await page.set_viewport_size({"width": width, "height": initial_height})
+
+            await page.goto(
+                url, wait_until="load", timeout=settings.browser_search.browser.timeout_ms
+            )
+            try:
+                await page.wait_for_load_state(
+                    "networkidle", timeout=settings.browser_search.browser.timeout_ms
+                )
+            except Exception:
+                # Networkidle timeout can be ignored if page is otherwise loaded
+                pass
+
+            if height is None:
+                content_height = await page.evaluate("() => document.documentElement.scrollHeight")
+                viewport_height = max(content_height, 1)
+                await page.set_viewport_size({"width": width, "height": viewport_height})
+                screenshot_bytes = await page.screenshot(full_page=False, type="png")
+                actual_height = viewport_height
+            else:
+                screenshot_bytes = await page.screenshot(full_page=True, type="png")
+                actual_height = height
+
+        finally:
+            if is_temp_session:
+                await session_manager.close_session(active_session_id)
+
+        output_dir = settings.render_output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+        resolved_path = output_dir / f"screenshot_{uuid4().hex[:8]}.png"
+
+        import asyncio
+
+        await asyncio.to_thread(resolved_path.write_bytes, screenshot_bytes)
+
+        base64_data = base64.b64encode(screenshot_bytes).decode("utf-8")
+        return {
+            "file_path": str(resolved_path),
+            "base64_image": base64_data,
+            "width": width,
+            "height": actual_height,
+            "url": url,
+        }

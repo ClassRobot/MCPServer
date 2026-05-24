@@ -5,6 +5,8 @@
 ## 文档索引
 
 - **[development.md](development.md)**: 项目开发与组织规范（分层约定、测试及开发环境指令）。
+- **[database.md](database.md)**: 数据库技术选型、分层落点与迁移使用说明。
+- **[docker-development.md](docker-development.md)**: 开发模式 Docker 部署说明（源码挂载、PostgreSQL、测试和迁移）。
 - **[docker.md](docker.md)**: 生产环境 Docker 镜像构建与部署说明（挂载、缓存、环境变量）。
 - **[environment.yml](../environment.yml)**: 针对 Conda 用户的可选开发环境定义。
 

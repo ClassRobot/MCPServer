@@ -1,0 +1,62 @@
+services:
+  mcp-server-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        PYTHON_IMAGE: ${MCP_DEV_PYTHON_IMAGE:-python:3.13-slim-bookworm}
+    image: mcp-server:dev
+    container_name: mcp-server-dev
+    command:
+      - sh
+      - -c
+      - |
+        uv sync --frozen --all-groups
+        uv run --no-sync alembic upgrade head
+        exec uv run --no-sync watchfiles --filter all \
+          "mcp-server --transport streamable-http --host 0.0.0.0 --port 8000" \
+          src config alembic
+    environment:
+      DATABASE_URL: postgresql://${MCP_DEV_POSTGRES_USER:-mcp}:${MCP_DEV_POSTGRES_PASSWORD:-mcp_dev}@postgres:5432/${MCP_DEV_POSTGRES_DB:-mcp_server}
+      MCP_SERVER_HOST: 0.0.0.0
+      MCP_SERVER_PORT: 8000
+      MCP_PROJECT_ROOT: /workspace
+      MCP_BROWSER_CONFIG_PATH: /workspace/config/browser_search.yaml
+      MCP_BROWSER_CACHE_BASE_DIR: /data/cache/browser-search
+      MCP_LOG_FILE_PATH: /data/logs/mcp-server.log
+      WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "${MCP_DEV_SERVER_PORT:-8000}:8000"
+    volumes:
+      - .:/workspace
+      - mcp-server-dev-venv:/opt/venv
+      - mcp-server-dev-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: ${MCP_DEV_POSTGRES_IMAGE:-postgres:17-bookworm}
+    container_name: mcp-server-postgres-dev
+    environment:
+      POSTGRES_DB: ${MCP_DEV_POSTGRES_DB:-mcp_server}
+      POSTGRES_USER: ${MCP_DEV_POSTGRES_USER:-mcp}
+      POSTGRES_PASSWORD: ${MCP_DEV_POSTGRES_PASSWORD:-mcp_dev}
+    ports:
+      - "${MCP_DEV_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - mcp-server-postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mcp-server-dev-venv:
+  mcp-server-dev-data:
+  mcp-server-postgres-dev-data:

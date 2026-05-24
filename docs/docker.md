@@ -2,6 +2,8 @@
 
 本 Docker 方案用于将 `mcp-server` 部署于生产环境，默认以 `streamable-http` 模式对外提供服务。
 
+如果需要在 Docker 中进行日常开发、挂载源码、运行测试和启动开发数据库，请使用 [docker-development.md](docker-development.md) 中的开发容器方案。
+
 ## 独立运行设计
 容器内使用镜像自带的 Python 运行环境与 `uv` 管理依赖，以确保运行时的绝对独立性与可重复性。
 
@@ -9,6 +11,7 @@
 - **环境安全**: 使用非 root 用户运行，保障容器安全。
 - **内置服务**: 预装 Playwright Chromium 及其系统依赖。
 - **缓存目录**: 默认将浏览器搜索缓存持久化于 `/data/cache/browser-search`。
+- **日志目录**: 默认将本地文件日志写入 `/data/logs/mcp-server.log`。
 
 ## 构建与运行
 
@@ -35,6 +38,8 @@ docker run --rm -p 8000:8000 \
 ### 端口与路径覆盖
 - **端口**: `-e MCP_SERVER_PORT=9000` (映射宿主机端口需同步调整)。
 - **缓存位置**: `-e MCP_BROWSER_CACHE_BASE_DIR=/data/custom-cache`。
+- **日志文件**: `-e MCP_LOG_FILE_PATH=/data/logs/custom.log`。
+- **终端日志颜色**: `-e MCP_LOG_CONSOLE_COLOR=false` 可关闭 Docker logs 中的 ANSI 彩色输出。
 - **配置文件**: `-e MCP_BROWSER_CONFIG_PATH=/config/custom.yaml` 并挂载对应配置文件。
 
 ### 常用环境变量
@@ -49,9 +54,10 @@ MCP_BROWSER_CONFIG_PATH, MCP_BROWSER_CACHE_BASE_DIR, MCP_BROWSER_HEADLESS, MCP_B
 
 # 搜索与过滤
 MCP_BROWSER_DEFAULT_PROVIDER, MCP_BROWSER_MAX_RESULTS, MCP_BROWSER_CACHE_ENABLED, MCP_BROWSER_CACHE_TTL_SEC, MCP_BROWSER_CACHE_MAX_ENTRIES, MCP_BROWSER_FILTER_ADS_ENABLED
+
+# 日志
+MCP_LOGGING_CONFIG_PATH, MCP_LOG_LEVEL, MCP_LOG_CONSOLE_ENABLED, MCP_LOG_CONSOLE_COLOR, MCP_LOG_FILE_ENABLED, MCP_LOG_FILE_PATH, MCP_LOG_RETENTION_DAYS, MCP_LOG_TOOL_ARGS
 ```
 
 ## 运行边界
 - 容器方案专为主打流式 HTTP 模式设计，暂不以 stdio 作为主要容器运行场景。
-
-

@@ -18,22 +18,30 @@
 ## 开发规范
 
 ### 环境与依赖
-- **包管理器**: 默认使用 `uv` 管理依赖与虚拟环境（提供可选的 `environment.yml` 作为备用）。
+- **开发环境**: 推荐使用 `uv` 自动管理的 `.venv` 虚拟环境，或任意 Python 3.11+ 运行环境。
+- **包管理器**: 项目完全使用 `uv` 管理依赖与环境，保证依赖版本与 `uv.lock` 严格一致。
 - **常用命令**:
   ```bash
-  uv sync                           # 同步依赖
-  uv run playwright install chromium # 安装浏览器核心
-  uv run ruff check .               # 代码检查
-  uv run ruff format .              # 代码格式化
-  uv run pytest                     # 运行测试
+  uv sync                             # 初始化并同步依赖
+  uv run playwright install chromium   # 安装浏览器核心
+  uv run ruff check .                 # 代码静态检查与 Lint
+  uv run ruff format .                # 代码格式化
+  uv run pytest                       # 运行单元测试
   ```
 
 ### 测试约定
 - 测试目录 `tests/` 结构与 `src/` 的职责映射保持一致。
 - 优先对纯逻辑和工具做单元测试；确保 CLI 启动与配置解析具备最小覆盖，防止变更隐式出错。
 
+### 日志约定
+- 日志配置默认读取 `config/logging.yaml`，可通过 `MCP_LOGGING_CONFIG_PATH` 指定其他 YAML。
+- 默认同时输出到终端 `stderr` 和本地文件 `runtime/logs/mcp-server.log`。
+- 终端日志默认启用 ANSI 彩色输出，文件日志始终保持纯文本，避免回溯和 grep 时混入转义字符。
+- 本地日志按天滚动，默认保留 14 天。
+- 常用调试变量：`MCP_LOG_LEVEL=DEBUG`、`MCP_LOG_CONSOLE_COLOR=false`、`MCP_LOG_TOOL_ARGS=true`。
+- Tool 参数日志默认关闭；开启后也只记录安全摘要，敏感字段会脱敏，长文本会截断。
+
 ### 变更原则
 1. **就近与下沉**: 仅单一模块使用的帮助函数保持就近；业务变复杂或多模块共享时，再下沉至 `services/` 或 `adapters/`。
 2. **单一职责**: Tool/Resource 仅处理参数边界和输入输出，复杂编排下沉。
 3. **闭环变更**: 引入新目录或新功能模块时，需在同一次变更中补齐对应目录的 `README.md`。每次结构调整后须确保 Lint 和测试全部通过。
-

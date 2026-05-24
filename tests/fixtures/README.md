@@ -13,4 +13,3 @@
 - `bing_results.html`: 正常自然结果页
 - `bing_ads.html`: 混有广告候选结果
 - `bing_empty.html`: 空结果页
-
