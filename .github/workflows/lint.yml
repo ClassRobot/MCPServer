@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install Dependencies
+        run: uv sync --all-groups
+
       - name: Check Formatting
         run: uv run ruff format --check
 

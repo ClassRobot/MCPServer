@@ -13,6 +13,7 @@ from .config import ServerSettings, load_server_settings
 from .prompts import register_prompts
 from .resources import register_resources
 from .services.browser_search import BrowserSearchService
+from .services.rendering import ContentRenderingService
 from .services.search_results import SearchResultFilter
 from .tools import register_tools
 
@@ -30,6 +31,10 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         result_filter=result_filter,
         browser_settings=active_settings.browser_search.browser,
         cache_settings=active_settings.browser_search.cache,
+    )
+    rendering_service = ContentRenderingService(
+        session_manager=session_manager,
+        default_output_dir=active_settings.render_output_dir,
     )
 
     @asynccontextmanager
@@ -56,6 +61,7 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         settings=active_settings,
         browser_search_service=browser_search_service,
         session_manager=session_manager,
+        rendering_service=rendering_service,
     )
     register_resources(mcp)
     register_prompts(mcp)

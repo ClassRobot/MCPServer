@@ -100,7 +100,16 @@ class SearchCacheStore:
         self.prune()
 
     def prune(self) -> None:
-        """Delete expired or excessive cache entries using fast filesystem metadata checks."""
+        """Delete expired or excessive cache entries using fast filesystem metadata checks.
+
+        NOTE ON EXPIRATION STRATEGY:
+        For performance reasons, prune() uses `st_mtime` and the current `ttl_sec` setting
+        to clean up expired files without loading and parsing every JSON file on disk.
+        Conversely, get() uses the explicit `expires_at` timestamp written inside the JSON payload.
+        While changing `ttl_sec` dynamically might create a slight temporary discrepancy between
+        the two methods, this trade-off is intentional to keep prune() extremely fast (O(N) stat
+        calls instead of O(N) file reads and JSON parses).
+        """
         cache_dir = self._settings.base_dir
         if not cache_dir.exists():
             return

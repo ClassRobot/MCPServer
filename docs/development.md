@@ -1,90 +1,39 @@
 # Development Guide
 
 ## 目标
+保障 Python MCP Server 具备稳定的扩展结构、清晰的职责划分与良好的可测试性。
 
-这个项目用于持续开发 Python MCP Server，不只追求“能跑”，还要保证后续新增工具、资源、提示词时结构稳定、职责清晰、便于测试。
+## 架构与分层设计
 
-## 分层约定
+| 层次 | 路径 | 核心职责 | 扩展与新功能规则 |
+| :--- | :--- | :--- | :--- |
+| **入口层** | `__main__.py` | CLI 参数解析与进程启动，无业务逻辑。 | 保持精简，不放任何具体实现。 |
+| **装配层** | `app.py` | 实例化 `FastMCP`，注册各模块能力。 | 仅做能力装配与注册，不写具体业务。 |
+| **配置层** | `config.py` | 集中读取环境变量、默认值及配置校验。 | 新增配置项必须在此集中定义。 |
+| **能力层** | `tools/`<br>`resources/`<br>`prompts/` | 承载 MCP 的具体能力模块。<br>通过 `__init__.py` 导出统一注册函数。 | 1. 新增独立 Tool/Resource/Prompt 先放入此层。<br>2. 保持各模块高内聚。 |
+| **服务层** | `services/` | 跨 Tool 共享的复杂业务流程与编排。 | 多个 Tool 共用相同业务逻辑时，提取至此。 |
+| **适配层** | `adapters/` | 外部系统对接（如 Playwright、缓存、Bing）。 | 处理第三方依赖及异常封装，不含业务决策。 |
+| **模型层** | `schemas/` | 跨层共享的数据模型与类型定义。 | 避免裸 `dict`，多模块共享的数据结构在此定义。 |
 
-### 入口层
+## 开发规范
 
-- `src/mcp_server/__main__.py`
-- 负责 CLI 参数解析和进程启动。
-- 不承载具体业务逻辑。
+### 环境与依赖
+- **包管理器**: 默认使用 `uv` 管理依赖与虚拟环境（提供可选的 `environment.yml` 作为备用）。
+- **常用命令**:
+  ```bash
+  uv sync                           # 同步依赖
+  uv run playwright install chromium # 安装浏览器核心
+  uv run ruff check .               # 代码检查
+  uv run ruff format .              # 代码格式化
+  uv run pytest                     # 运行测试
+  ```
 
-### 应用装配层
+### 测试约定
+- 测试目录 `tests/` 结构与 `src/` 的职责映射保持一致。
+- 优先对纯逻辑和工具做单元测试；确保 CLI 启动与配置解析具备最小覆盖，防止变更隐式出错。
 
-- `src/mcp_server/app.py`
-- 负责创建 `FastMCP` 实例并注册 tools、resources、prompts。
-- 这里只做装配，不写具体能力实现。
+### 变更原则
+1. **就近与下沉**: 仅单一模块使用的帮助函数保持就近；业务变复杂或多模块共享时，再下沉至 `services/` 或 `adapters/`。
+2. **单一职责**: Tool/Resource 仅处理参数边界和输入输出，复杂编排下沉。
+3. **闭环变更**: 引入新目录或新功能模块时，需在同一次变更中补齐对应目录的 `README.md`。每次结构调整后须确保 Lint 和测试全部通过。
 
-### 配置层
-
-- `src/mcp_server/config.py`
-- 负责环境变量读取、默认值、配置校验。
-- 新增配置时，优先在这里集中定义。
-
-### 能力层
-
-- `src/mcp_server/tools/`
-- `src/mcp_server/resources/`
-- `src/mcp_server/prompts/`
-- 每个模块只负责一类能力，并提供统一的注册函数。
-
-### 扩展层
-
-当项目开始接真实业务时，按需要补以下目录：
-
-- `src/mcp_server/services/`: 业务流程、外部 API 调用、数据库访问
-- `src/mcp_server/schemas/`: 输入输出模型、共享数据结构
-- `src/mcp_server/adapters/`: 第三方系统适配器
-- `config/`: 项目级 YAML 配置文件
-
-## 新功能放置规则
-
-1. 如果只是新增一个独立 MCP tool，先放进 `tools/`。
-2. 如果多个 tool 共用相同业务逻辑，把重复逻辑提取到 `services/`。
-3. 如果多个模块共享稳定数据结构，用显式类型而不是裸 `dict`。
-4. 如果只被一个模块使用的帮助函数，不要过早上提到全局共享目录。
-
-## 测试约定
-
-- `tests/` 中的测试应镜像 `src/` 的职责边界。
-- Tool 的纯逻辑优先做单元测试。
-- 配置解析和 CLI 参数解析要有最小覆盖，避免后续运行方式变更时静默出错。
-
-## 环境约定
-
-- 开发环境统一使用 conda 环境 `classbot-mcp`。
-- 使用 [environment.yml](../environment.yml) 创建环境。
-- 在 PowerShell 中，激活 conda 后还需要将 `VIRTUAL_ENV` 指向 `$env:CONDA_PREFIX`，这样 `uv --active` 才会把 conda 环境当作目标环境。
-- 依赖安装和更新使用 `uv sync --active`。
-- 项目命令执行默认使用 `uv run --active ...`。
-- 不在仓库目录内创建 `.venv` 作为项目默认环境。
-
-## 目录文档约定
-
-- 每个承担开发职责的目录都应放置自己的 `README.md`。
-- 目录 README 的目标是帮助开发者理解“这里为什么存在、应该放什么、如何扩展”。
-- 不要求所有目录使用同一模板。
-- `tools/`、`resources/`、`prompts/`、`tests/`、`docs/` 这类目录应根据自身用途采用不同写法。
-- 新增 `services/`、`schemas/`、`adapters/` 等新目录时，应在同一变更中补上对应 README。
-
-## 开发命令
-
-```powershell
-conda activate classbot-mcp
-$env:VIRTUAL_ENV = $env:CONDA_PREFIX
-uv sync --active
-uv run --active playwright install chromium
-uv run --active ruff check .
-uv run --active ruff format .
-uv run --active pytest
-```
-
-## 变更原则
-
-1. 新增结构前先确认是否已经有合适的落点。
-2. Tool 只处理参数边界和结果返回，不负责复杂业务编排。
-3. 配置读取保持集中，避免隐式依赖当前工作目录或源码相对路径。
-4. 每次结构调整后都运行 lint 和 tests。

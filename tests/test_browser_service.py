@@ -56,7 +56,11 @@ class FakeProvider:
         ]
 
 
-def test_browser_search_service_uses_cache_and_filters_ads(tmp_path) -> None:
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_browser_search_service_uses_cache_and_filters_ads(tmp_path) -> None:
     session_manager = FakeSessionManager()
     provider = FakeProvider()
     service = BrowserSearchService(
@@ -72,8 +76,8 @@ def test_browser_search_service_uses_cache_and_filters_ads(tmp_path) -> None:
         ),
     )
 
-    first_response = asyncio.run(service.search(query="openai", include_summary=True))
-    second_response = asyncio.run(service.search(query="openai", include_summary=True))
+    first_response = await service.search(query="openai", include_summary=True)
+    second_response = await service.search(query="openai", include_summary=True)
 
     assert provider.calls == 1
     assert first_response.cache_hit is False
@@ -85,7 +89,8 @@ def test_browser_search_service_uses_cache_and_filters_ads(tmp_path) -> None:
     assert session_manager.closed_sessions == ["session-1"]
 
 
-def test_browser_search_service_force_refresh_bypasses_cache(tmp_path) -> None:
+@pytest.mark.asyncio
+async def test_browser_search_service_force_refresh_bypasses_cache(tmp_path) -> None:
     session_manager = FakeSessionManager()
     provider = FakeProvider()
     cache_settings = SearchCacheSettings(
@@ -100,7 +105,7 @@ def test_browser_search_service_force_refresh_bypasses_cache(tmp_path) -> None:
         cache_settings=cache_settings,
     )
 
-    asyncio.run(service.search(query="openai"))
-    asyncio.run(service.search(query="openai", force_refresh=True))
+    await service.search(query="openai")
+    await service.search(query="openai", force_refresh=True)
 
     assert provider.calls == 2

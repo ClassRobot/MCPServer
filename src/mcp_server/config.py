@@ -21,6 +21,7 @@ DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BROWSER_CONFIG_PATH = DEFAULT_PROJECT_ROOT / "config" / "browser_search.yaml"
 DEFAULT_RUNTIME_ROOT = DEFAULT_PROJECT_ROOT / "runtime"
 DEFAULT_CACHE_BASE_DIR = DEFAULT_RUNTIME_ROOT / "cache" / "browser-search"
+DEFAULT_RENDER_OUTPUT_DIR = DEFAULT_RUNTIME_ROOT / "render"
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +77,7 @@ class ServerSettings:
     stateless_http: bool = True
     project_root: Path = DEFAULT_PROJECT_ROOT
     browser_search_config_path: Path = DEFAULT_BROWSER_CONFIG_PATH
+    render_output_dir: Path = DEFAULT_RENDER_OUTPUT_DIR
     browser_search: BrowserSearchSettings = field(default_factory=BrowserSearchSettings)
 
 
@@ -94,6 +96,7 @@ def load_server_settings() -> ServerSettings:
         streamable_http_path=os.getenv("MCP_SERVER_STREAMABLE_HTTP_PATH", "/mcp"),
         project_root=project_root,
         browser_search_config_path=browser_search_config_path,
+        render_output_dir=_resolve_path(project_root, os.getenv("MCP_RENDER_OUTPUT_DIR", "runtime/render")),
         browser_search=_load_browser_search_settings(browser_search_config, project_root),
     )
 

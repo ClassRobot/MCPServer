@@ -1,4 +1,4 @@
-name: classbot-mcp
+name: mcp-server
 channels:
   - defaults
 dependencies:

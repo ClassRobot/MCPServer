@@ -98,7 +98,11 @@ class FakePlaywright:
         self.stopped = True
 
 
-def test_browser_session_manager_open_fill_click_extract_and_close() -> None:
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_browser_session_manager_open_fill_click_extract_and_close() -> None:
     manager = BrowserSessionManager(BrowserSettings())
     fake_page = FakePage()
     fake_context = FakeContext(fake_page)
@@ -106,20 +110,17 @@ def test_browser_session_manager_open_fill_click_extract_and_close() -> None:
     fake_playwright = FakePlaywright(FakeChromium(fake_browser))
     manager._playwright = fake_playwright
 
-    async def run_flow() -> None:
-        session = await manager.create_session()
-        opened = await manager.open(session.session_id, "https://example.com/")
-        filled = await manager.fill(session.session_id, "#search", "openai")
-        clicked = await manager.click(session.session_id, "#submit")
-        extracted = await manager.extract(session.session_id, selector="main", include_links=True)
-        closed = await manager.close_session(session.session_id)
+    session = await manager.create_session()
+    opened = await manager.open(session.session_id, "https://example.com/")
+    filled = await manager.fill(session.session_id, "#search", "openai")
+    clicked = await manager.click(session.session_id, "#submit")
+    extracted = await manager.extract(session.session_id, selector="main", include_links=True)
+    closed = await manager.close_session(session.session_id)
 
-        assert opened["title"] == "Example Page"
-        assert filled["value"] == "openai"
-        assert clicked["url"].endswith("#clicked")
-        assert "Hello from the browser session." in extracted.text
-        assert extracted.links[0].url == "https://example.com/docs"
-        assert extracted.links[1].url == "https://example.com/relative-path"
-        assert closed["closed"] is True
-
-    asyncio.run(run_flow())
+    assert opened["title"] == "Example Page"
+    assert filled["value"] == "openai"
+    assert clicked["url"].endswith("#clicked")
+    assert "Hello from the browser session." in extracted.text
+    assert extracted.links[0].url == "https://example.com/docs"
+    assert extracted.links[1].url == "https://example.com/relative-path"
+    assert closed["closed"] is True

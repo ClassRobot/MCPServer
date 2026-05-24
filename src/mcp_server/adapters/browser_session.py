@@ -219,11 +219,12 @@ class BrowserSessionManager:
 
     async def _cleanup_expired_sessions(self) -> None:
         """Close sessions whose TTL has elapsed."""
-        expiration_cutoff = datetime.now(UTC) - timedelta(seconds=self._settings.session_ttl_sec)
-        expired_ids = [
-            session_id
-            for session_id, session in self._sessions.items()
-            if session.last_used_at < expiration_cutoff
-        ]
-        for session_id in expired_ids:
-            await self.close_session(session_id)
+        async with self._lock:
+            expiration_cutoff = datetime.now(UTC) - timedelta(seconds=self._settings.session_ttl_sec)
+            expired_ids = [
+                session_id
+                for session_id, session in self._sessions.items()
+                if session.last_used_at < expiration_cutoff
+            ]
+            for session_id in expired_ids:
+                await self.close_session(session_id)
