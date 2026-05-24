@@ -22,7 +22,8 @@ def register_database_tools(
     @mcp.tool(
         name="database_record_query",
         description=(
-            "Persist a query-history record in the configured database and return the stored row."
+            "Permanently record a search query and its metadata into the persistent database. "
+            "Useful for auditing, history tracking, and future query optimization."
         ),
     )
     @log_mcp_tool("database_record_query", logging_settings)
@@ -32,6 +33,14 @@ def register_database_tools(
         source_tool: str = "manual",
         notes: str | None = None,
     ) -> list[Any]:
+        """Save a query record.
+
+        Args:
+            query: The actual search string or question that was asked.
+            provider: The name of the service provider used (e.g., 'bing', 'internal').
+            source_tool: The name of the tool that triggered this record.
+            notes: Optional additional context or observations about the query.
+        """
         from mcp.types import TextContent
 
         record = await query_history_service.record_query(
@@ -49,10 +58,18 @@ def register_database_tools(
 
     @mcp.tool(
         name="database_list_query_history",
-        description=("Read the newest persisted query-history rows from the configured database."),
+        description=(
+            "Retrieve a list of the most recent query records from the database. "
+            "Allows the AI to see past interactions and maintain context over time."
+        ),
     )
     @log_mcp_tool("database_list_query_history", logging_settings)
     async def database_list_query_history(limit: int = 10) -> list[Any]:
+        """List recent queries.
+
+        Args:
+            limit: Maximum number of records to retrieve (default: 10).
+        """
         from mcp.types import TextContent
 
         records = await query_history_service.list_recent_queries(limit=limit)

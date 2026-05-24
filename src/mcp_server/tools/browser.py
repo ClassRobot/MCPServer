@@ -25,9 +25,9 @@ def register_browser_tools(
     @mcp.tool(
         name="browser_search",
         description=(
-            "Execute a comprehensive browser-driven search using public search engines (e.g., Bing). "
-            "Returns structured search results including titles, URLs, and snippets. "
-            "Best used for gathering real-time information from the web."
+            "Execute a comprehensive browser-driven search using public search engines."
+            " Returns structured search results including titles, URLs, and snippets."
+            " Best used for gathering real-time information from the web."
         ),
     )
     @log_mcp_tool("browser_search", settings.logging)
@@ -46,10 +46,10 @@ def register_browser_tools(
             query: The search keywords or natural language question.
             provider: The search engine provider to use (currently supports 'bing').
             max_results: Maximum number of search results to return.
-            include_summary: Whether to include an AI-generated summary of the results (if supported).
-            use_cache: If True, returns cached results if available to save time and resources.
+            include_summary: Whether to include an AI-generated summary (if supported).
+            use_cache: If True, returns cached results if available.
             force_refresh: If True, bypasses the cache and performs a fresh search.
-            filter_ads: Whether to exclude advertisements and sponsored content from results.
+            filter_ads: Whether to exclude advertisements and sponsored content.
         """
         from mcp.types import TextContent
 
@@ -154,7 +154,9 @@ def register_browser_tools(
 
     @mcp.tool(
         name="browser_click",
-        description="Click a button, link, or other clickable element identified by a CSS selector.",
+        description=(
+            "Click a button, link, or other clickable element identified by a CSS selector."
+        ),
         structured_output=True,
     )
     @log_mcp_tool("browser_click", settings.logging)
@@ -338,7 +340,8 @@ def register_browser_tools(
         description = (
             f"Screenshot of {url} captured successfully.\n"
             f"Dimensions: {width}x{actual_height}px\n"
-            f"Saved to: {resolved_path}"
+            f"Local Path: {resolved_path}\n"
+            f"Resource URI: render://{resolved_path.name}"
         )
 
         return [

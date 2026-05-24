@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -61,7 +62,8 @@ def register_rendering_tools(
         description = (
             f"Successfully rendered {input_format} content to image.\n"
             f"Dimensions: {result.width}x{result.height}px\n"
-            f"Saved to: {result.file_path}"
+            f"Local Path: {result.file_path}\n"
+            f"Resource URI: render://{Path(result.file_path).name}"
         )
 
         return [
@@ -119,7 +121,8 @@ def register_rendering_tools(
         description = (
             f"Successfully generated {chart_type} chart: {title or 'Untitled'}\n"
             f"Dimensions: {result.width}x{result.height}px\n"
-            f"Saved to: {result.file_path}"
+            f"Local Path: {result.file_path}\n"
+            f"Resource URI: render://{Path(result.file_path).name}"
         )
 
         return [

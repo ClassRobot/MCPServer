@@ -77,6 +77,10 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         rendering_service=rendering_service,
         pdf_service=pdf_service,
     )
-    register_resources(mcp, query_history_service=query_history_service)
+    register_resources(
+        mcp,
+        query_history_service=query_history_service,
+        render_output_dir=active_settings.render_output_dir,
+    )
     register_prompts(mcp)
     return mcp

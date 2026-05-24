@@ -77,7 +77,17 @@ def register_pdf_tools(
         for idx in pages_to_render:
             png_bytes, file_path = await pdf_service.render_pdf_page(path, idx, dpi=dpi)
             base64_img = base64.b64encode(png_bytes).decode("utf-8")
-            contents.append(TextContent(type="text", text=f"Page {idx + 1} saved to: {file_path}"))
+            file_name = Path(file_path).name
+            contents.append(
+                TextContent(
+                    type="text",
+                    text=(
+                        f"Page {idx + 1} saved to:\n"
+                        f"  - Local Path: {file_path}\n"
+                        f"  - Resource URI: render://{file_name}"
+                    ),
+                )
+            )
             contents.append(
                 ImageContent(
                     type="image",
