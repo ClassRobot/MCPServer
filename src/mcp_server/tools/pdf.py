@@ -28,14 +28,13 @@ def register_pdf_tools(
             "Render specified pages (or all pages) of a local PDF document into high-fidelity "
             "PNG images. Returns the file paths and base64-encoded image strings."
         ),
-        structured_output=True,
     )
     @log_mcp_tool("browser_render_pdf", logging_settings)
     async def browser_render_pdf(
         pdf_path: str,
         pages: list[int] | None = None,
         dpi: int = 150,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
         """Render pages of a PDF to images for multi-modal processing.
 
         Args:
@@ -44,6 +43,8 @@ def register_pdf_tools(
                 renders all pages.
             dpi: The target resolution (dots per inch) for page visual rendering. Defaults to 150.
         """
+        from mcp.types import ImageContent, TextContent
+
         path = Path(pdf_path)
         if not path.is_absolute():
             path = (project_root / path).resolve()
@@ -64,23 +65,28 @@ def register_pdf_tools(
                     )
                 pages_to_render.append(p - 1)
 
-        rendered_pages = []
+        contents: list[Any] = []
+        description = (
+            f"Successfully rendered {len(pages_to_render)} pages from {path.name}.\n"
+            f"Total pages in document: {total_pages}"
+        )
+        contents.append(TextContent(type="text", text=description))
+
         for idx in pages_to_render:
             png_bytes, file_path = await pdf_service.render_pdf_page(path, idx, dpi=dpi)
             base64_img = base64.b64encode(png_bytes).decode("utf-8")
-            rendered_pages.append(
-                {
-                    "page": idx + 1,
-                    "file_path": file_path,
-                    "base64_image": base64_img,
-                }
+            contents.append(
+                TextContent(type="text", text=f"Page {idx + 1} saved to: {file_path}")
+            )
+            contents.append(
+                ImageContent(
+                    type="image",
+                    data=base64_img,
+                    mimeType="image/png",
+                )
             )
 
-        return {
-            "pdf_path": str(path),
-            "total_pages": len(pages_to_render),
-            "pages": rendered_pages,
-        }
+        return contents
 
     @mcp.tool(
         name="browser_extract_pdf_text",
@@ -88,13 +94,12 @@ def register_pdf_tools(
             "Extract structure-preserving plain text from specified pages (or all pages) "
             "of a local PDF document."
         ),
-        structured_output=True,
     )
     @log_mcp_tool("browser_extract_pdf_text", logging_settings)
     async def browser_extract_pdf_text(
         pdf_path: str,
         pages: list[int] | None = None,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
         """Extract high-fidelity plain text from pages of a PDF document.
 
         Args:
@@ -102,6 +107,8 @@ def register_pdf_tools(
             pages: An optional list of 1-indexed page numbers to extract text from.
                 If not provided, extracts text from all pages.
         """
+        from mcp.types import TextContent
+
         path = Path(pdf_path)
         if not path.is_absolute():
             path = (project_root / path).resolve()
@@ -122,18 +129,21 @@ def register_pdf_tools(
                     )
                 pages_to_extract.append(p - 1)
 
-        extracted_pages = []
+        contents = []
+        contents.append(
+            TextContent(
+                type="text",
+                text=f"Extracted {len(pages_to_extract)} pages from {path.name} (Total: {total_pages})",
+            )
+        )
+
         for idx in pages_to_extract:
             text = await pdf_service.extract_pdf_text(path, idx)
-            extracted_pages.append(
-                {
-                    "page": idx + 1,
-                    "text": text,
-                }
+            contents.append(
+                TextContent(
+                    type="text",
+                    text=f"--- Page {idx + 1} ---\n{text}",
+                )
             )
 
-        return {
-            "pdf_path": str(path),
-            "total_pages": len(pages_to_extract),
-            "pages": extracted_pages,
-        }
+        return contents

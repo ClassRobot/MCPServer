@@ -37,9 +37,13 @@ class BingSearchProvider:
             timeout=self._settings.timeout_ms,
         )
         try:
-            await page.wait_for_selector("#b_results", timeout=self._settings.timeout_ms)
+            await page.wait_for_selector(
+                "#b_results",
+                state="attached",
+                timeout=self._settings.timeout_ms,
+            )
         except PlaywrightTimeoutError as exc:
-            raise RuntimeError("Bing result container '#b_results' was not found.") from exc
+            raise RuntimeError("Bing result container '#b_results' was not attached.") from exc
         html = await page.content()
         return self.parse_results(html)
 

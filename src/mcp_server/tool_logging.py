@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any, TypeVar, get_type_hints
 from uuid import uuid4
 
+from mcp.server.fastmcp import FastMCP
+
 from mcp_server.config import LoggingSettings
 from mcp_server.logging_config import log_event
 
@@ -135,6 +137,14 @@ def _log_tool_start(
         fields["args"] = _summarize_arguments(signature, args, kwargs, settings)
     log_event(logger, logging.INFO, "tool.start", **fields)
 
+    # Bridge to MCP client if context is available
+    try:
+        ctx = FastMCP.get_context()
+        if ctx:
+            ctx.info(f"Starting tool {tool_name} (id: {call_id})")
+    except Exception:
+        pass
+
 
 def _log_tool_finish(
     logger: logging.Logger,
@@ -143,14 +153,23 @@ def _log_tool_finish(
     started_at: float,
 ) -> None:
     """Log successful completion of a tool call."""
+    duration = _elapsed_ms(started_at)
     log_event(
         logger,
         logging.INFO,
         "tool.finish",
         tool=tool_name,
         call_id=call_id,
-        duration_ms=_elapsed_ms(started_at),
+        duration_ms=duration,
     )
+
+    # Bridge to MCP client if context is available
+    try:
+        ctx = FastMCP.get_context()
+        if ctx:
+            ctx.info(f"Finished tool {tool_name} in {duration}ms")
+    except Exception:
+        pass
 
 
 def _log_tool_error(
@@ -161,17 +180,26 @@ def _log_tool_error(
     exc: Exception,
 ) -> None:
     """Log a failed tool call while preserving the original exception."""
+    duration = _elapsed_ms(started_at)
     log_event(
         logger,
         logging.ERROR,
         "tool.error",
         tool=tool_name,
         call_id=call_id,
-        duration_ms=_elapsed_ms(started_at),
+        duration_ms=duration,
         error_type=type(exc).__name__,
         error_message=str(exc),
         exc_info=True,
     )
+
+    # Bridge to MCP client if context is available
+    try:
+        ctx = FastMCP.get_context()
+        if ctx:
+            ctx.error(f"Tool {tool_name} failed: {exc}")
+    except Exception:
+        pass
 
 
 def _elapsed_ms(started_at: float) -> int:

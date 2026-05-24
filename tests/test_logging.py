@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from io import StringIO
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
@@ -32,6 +33,9 @@ def restore_logging_handlers() -> None:
         if handler not in original_handlers:
             root_logger.removeHandler(handler)
             handler.close()
+    for handler in original_handlers:
+        if handler not in root_logger.handlers:
+            root_logger.addHandler(handler)
     root_logger.setLevel(original_level)
 
 
@@ -165,6 +169,24 @@ def test_configure_logging_is_idempotent(tmp_path: Path) -> None:
 
     assert len(lines) == 1
     assert "event=single.event" in lines[0]
+
+
+def test_configure_logging_removes_existing_root_handlers(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    foreign_stream = StringIO()
+    foreign_handler = logging.StreamHandler(foreign_stream)
+    foreign_handler.setFormatter(logging.Formatter("foreign:%(message)s"))
+    logging.getLogger().addHandler(foreign_handler)
+
+    configure_logging(LoggingSettings(file_path=tmp_path / "mcp-server.log"))
+    logging.getLogger("mcp.server.streamable_http").info("Terminating session: None")
+
+    captured = capsys.readouterr()
+
+    assert foreign_stream.getvalue() == ""
+    assert "[INFO] mcp | Terminating session: None" in strip_ansi(captured.err)
 
 
 def test_configure_logging_uses_daily_file_rotation(tmp_path: Path) -> None:

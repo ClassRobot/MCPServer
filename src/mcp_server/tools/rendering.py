@@ -26,7 +26,6 @@ def register_rendering_tools(
             "Render raw HTML or Markdown content into a high-quality PNG image. "
             "Returns the local file path and a base64-encoded image string."
         ),
-        structured_output=True,
     )
     @log_mcp_tool("render_content_to_image", logging_settings)
     async def render_content_to_image(
@@ -36,7 +35,7 @@ def register_rendering_tools(
         width: int = 800,
         height: int | None = None,
         output_path: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
         """Convert HTML or Markdown to an image and return structured results.
 
         Args:
@@ -48,15 +47,9 @@ def register_rendering_tools(
                 stretched to fit the content exactly without bottom empty space.
             output_path: Optional file path to save the output PNG. If relative, saved in the
                 default output directory. If not provided, a random name is generated.
-
-        Returns:
-            A dictionary containing:
-                - file_path: The absolute local file path where the PNG is saved.
-                - base64_image: The base64-encoded string of the PNG bytes.
-                - width: The actual viewport width of the rendered image.
-                - height: The actual viewport height of the rendered image.
-                - input_format: The input format used for rendering.
         """
+        from mcp.types import ImageContent, TextContent
+
         result = await rendering_service.render(
             content=content,
             input_format=input_format,
@@ -65,7 +58,21 @@ def register_rendering_tools(
             height=height,
             output_path=output_path,
         )
-        return asdict(result)
+
+        description = (
+            f"Successfully rendered {input_format} content to image.\n"
+            f"Dimensions: {result.width}x{result.height}px\n"
+            f"Saved to: {result.file_path}"
+        )
+
+        return [
+            TextContent(type="text", text=description),
+            ImageContent(
+                type="image",
+                data=result.base64_image,
+                mimeType="image/png",
+            ),
+        ]
 
     @mcp.tool(
         name="render_data_chart",
@@ -73,7 +80,6 @@ def register_rendering_tools(
             "Generate a beautiful data chart (line, bar, pie, radar, scatter) as a PNG image "
             "using Apache ECharts. High-fidelity dynamic styling included."
         ),
-        structured_output=True,
     )
     @log_mcp_tool("render_data_chart", logging_settings)
     async def render_data_chart(
@@ -84,7 +90,7 @@ def register_rendering_tools(
         width: int = 800,
         height: int = 600,
         output_path: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
         """Convert a structured data payload into an exquisite ECharts visualization snapshot.
 
         Args:
@@ -99,6 +105,8 @@ def register_rendering_tools(
             height: Viewport rendering height in pixels. Defaults to 600.
             output_path: Optional exact path to save the output PNG file.
         """
+        from mcp.types import ImageContent, TextContent
+
         result = await rendering_service.render_chart(
             chart_type=chart_type,
             data=data,
@@ -108,4 +116,18 @@ def register_rendering_tools(
             height=height,
             output_path=output_path,
         )
-        return asdict(result)
+
+        description = (
+            f"Successfully generated {chart_type} chart: {title or 'Untitled'}\n"
+            f"Dimensions: {result.width}x{result.height}px\n"
+            f"Saved to: {result.file_path}"
+        )
+
+        return [
+            TextContent(type="text", text=description),
+            ImageContent(
+                type="image",
+                data=result.base64_image,
+                mimeType="image/png",
+            ),
+        ]

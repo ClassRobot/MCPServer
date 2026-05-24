@@ -14,6 +14,7 @@ from mcp_server.config import LoggingSettings
 
 _HANDLER_MARKER = "_mcp_server_handler"
 _UVICORN_LOGGER_NAMES = ("uvicorn", "uvicorn.error", "uvicorn.access", "uvicorn.asgi")
+_LIBRARY_LOGGER_PREFIXES = ("mcp",)
 _RESET = "\033[0m"
 _DIM = "\033[2m"
 _GREEN = "\033[32m"
@@ -90,8 +91,8 @@ def configure_logging(settings: LoggingSettings) -> None:
     root_logger.setLevel(settings.level)
 
     for handler in list(root_logger.handlers):
+        root_logger.removeHandler(handler)
         if getattr(handler, _HANDLER_MARKER, False):
-            root_logger.removeHandler(handler)
             handler.close()
 
     console_formatter = KeyValueFormatter(use_colors=settings.console_color_enabled)
@@ -114,7 +115,31 @@ def configure_logging(settings: LoggingSettings) -> None:
         _configure_handler(file_handler, file_formatter, settings.level)
         root_logger.addHandler(file_handler)
 
+    configure_library_loggers(settings)
     configure_uvicorn_logging(settings)
+
+
+def configure_library_loggers(settings: LoggingSettings) -> None:
+    """Route known library loggers through the project root handlers."""
+    logger_names = {
+        name
+        for name in logging.Logger.manager.loggerDict
+        if any(
+            name == prefix or name.startswith(f"{prefix}.")
+            for prefix in _LIBRARY_LOGGER_PREFIXES
+        )
+    }
+    logger_names.update(_LIBRARY_LOGGER_PREFIXES)
+
+    for logger_name in logger_names:
+        logger = logging.getLogger(logger_name)
+        logger.disabled = False
+        logger.setLevel(settings.level)
+        logger.propagate = True
+        for handler in list(logger.handlers):
+            logger.removeHandler(handler)
+            if getattr(handler, _HANDLER_MARKER, False):
+                handler.close()
 
 
 def configure_uvicorn_logging(settings: LoggingSettings) -> None:

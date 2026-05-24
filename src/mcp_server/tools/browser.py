@@ -27,7 +27,6 @@ def register_browser_tools(
         description=(
             "Run a browser-driven search on public search pages and return structured results."
         ),
-        structured_output=True,
     )
     @log_mcp_tool("browser_search", settings.logging)
     async def browser_search(
@@ -38,7 +37,9 @@ def register_browser_tools(
         use_cache: bool = True,
         force_refresh: bool = False,
         filter_ads: bool = True,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
+        from mcp.types import TextContent
+
         response = await browser_search_service.search(
             query=query,
             provider=provider or settings.browser_search.browser.default_provider,
@@ -48,7 +49,19 @@ def register_browser_tools(
             force_refresh=force_refresh,
             filter_ads=filter_ads,
         )
-        return asdict(response)
+
+        lines = [f"Search results for '{query}' via {response.provider}:", ""]
+        if not response.results:
+            lines.append("No results found.")
+        else:
+            for i, res in enumerate(response.results, 1):
+                lines.append(f"{i}. **{res.title}**")
+                lines.append(f"   URL: {res.url}")
+                if res.snippet:
+                    lines.append(f"   Snippet: {res.snippet}")
+                lines.append("")
+
+        return [TextContent(type="text", text="\n".join(lines))]
 
     @mcp.tool(
         name="browser_create_session",
@@ -125,7 +138,6 @@ def register_browser_tools(
     @mcp.tool(
         name="browser_extract",
         description="Extract text and optional links from the current browser page.",
-        structured_output=True,
     )
     @log_mcp_tool("browser_extract", settings.logging)
     async def browser_extract(
@@ -133,14 +145,29 @@ def register_browser_tools(
         selector: str | None = None,
         include_links: bool = False,
         max_links: int = 10,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
+        from mcp.types import TextContent
+
         extracted = await session_manager.extract(
             session_id=session_id,
             selector=selector,
             include_links=include_links,
             max_links=max_links,
         )
-        return asdict(extracted)
+
+        lines = [
+            f"Extracted from: {extracted.url}",
+            f"Title: {extracted.title}",
+            "",
+            extracted.text,
+        ]
+
+        if extracted.links:
+            lines.append("\n--- Links ---")
+            for link in extracted.links:
+                lines.append(f"- {link.text}: {link.url}")
+
+        return [TextContent(type="text", text="\n".join(lines))]
 
     @mcp.tool(
         name="browser_close_session",
@@ -185,7 +212,6 @@ def register_browser_tools(
             "Capture a high-quality visual screenshot of a given URL. "
             "Supports rendering either a specific height or full scrollable height."
         ),
-        structured_output=True,
     )
     @log_mcp_tool("browser_screenshot_url", settings.logging)
     async def browser_screenshot_url(
@@ -193,7 +219,7 @@ def register_browser_tools(
         width: int = 1200,
         height: int | None = None,
         session_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> list[Any]:
         """Capture a visual screen snapshot of any webpage.
 
         Args:
@@ -205,6 +231,8 @@ def register_browser_tools(
         """
         import base64
         from uuid import uuid4
+
+        from mcp.types import ImageContent, TextContent
 
         is_temp_session = False
         active_session_id = session_id
@@ -254,10 +282,18 @@ def register_browser_tools(
         await asyncio.to_thread(resolved_path.write_bytes, screenshot_bytes)
 
         base64_data = base64.b64encode(screenshot_bytes).decode("utf-8")
-        return {
-            "file_path": str(resolved_path),
-            "base64_image": base64_data,
-            "width": width,
-            "height": actual_height,
-            "url": url,
-        }
+
+        description = (
+            f"Screenshot of {url} captured successfully.\n"
+            f"Dimensions: {width}x{actual_height}px\n"
+            f"Saved to: {resolved_path}"
+        )
+
+        return [
+            TextContent(type="text", text=description),
+            ImageContent(
+                type="image",
+                data=base64_data,
+                mimeType="image/png",
+            ),
+        ]

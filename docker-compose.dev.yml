@@ -36,7 +36,7 @@ services:
         condition: service_healthy
 
   postgres:
-    image: ${MCP_DEV_POSTGRES_IMAGE:-postgres:17-bookworm}
+    image: ${MCP_DEV_POSTGRES_IMAGE:-postgres:17-alpine}
     container_name: mcp-server-postgres-dev
     environment:
       POSTGRES_DB: ${MCP_DEV_POSTGRES_DB:-mcp_server}
