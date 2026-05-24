@@ -43,7 +43,7 @@ async def test_read_render_resource_directory_traversal_prevention(tmp_path: Pat
 
 @pytest.mark.asyncio
 async def test_read_render_resource_file_not_found(tmp_path: Path) -> None:
-    """Verify that requesting a missing file raises ValueError containing the missing file error message."""
+    """Verify that requesting a missing file raises ValueError with expected message."""
     mcp = FastMCP("test")
     register_render_resources(mcp, tmp_path)
 

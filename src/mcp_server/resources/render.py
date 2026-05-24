@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -22,7 +21,12 @@ def register_render_resources(mcp: FastMCP, render_output_dir: Path) -> None:
             The raw file content bytes, serialized as a dynamic binary resource.
         """
         # Clean the filename: check for traversal components explicitly
-        if "/" in filename or "\\" in filename or ".." in filename or filename.startswith(("/", "\\")):
+        if (
+            "/" in filename
+            or "\\" in filename
+            or ".." in filename
+            or filename.startswith(("/", "\\"))
+        ):
             raise ValueError("Directory traversal attempt detected.")
 
         file_path = (render_output_dir / filename).resolve()
