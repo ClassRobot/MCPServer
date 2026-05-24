@@ -1,0 +1,47 @@
+# Pre-commit hook configuration for MCPServer
+# Enforces code style, formatting, file sanitization, and auto-updates/validates uv.lock and exported requirements.txt files.
+# To install hooks locally, run:
+#   uv sync --all-groups
+#   uv run pre-commit install
+
+default_stages: [pre-commit]
+
+repos:
+  # 1. uv hooks to automatically keep uv.lock synchronized and export standard requirements files
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.5.21
+    hooks:
+      - id: uv-lock
+        name: uv-lock (Auto-update and validate uv.lock)
+      - id: uv-export
+        name: uv-export (Export main dependencies to requirements.txt)
+        args: ["--no-dev", "--output-file=requirements.txt"]
+      - id: uv-export
+        name: uv-export-dev (Export dev dependencies to requirements-dev.txt)
+        args: ["--only-group", "dev", "--output-file=requirements-dev.txt"]
+
+  # 2. Ruff hooks for ultra-fast Python linting, auto-fixing, and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: ruff
+        name: ruff (Lint and Auto-fix)
+        args: [--fix]
+      - id: ruff-format
+        name: ruff-format (Format code)
+
+  # 3. Standard pre-commit hooks for file sanitization and basic syntax validation
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        name: Check for large files
+      - id: check-toml
+        name: Validate TOML syntax
+      - id: check-yaml
+        name: Validate YAML syntax
+        args: [--unsafe] # --unsafe allows custom tags (like in CI configs or YAML anchors)
+      - id: end-of-file-fixer
+        name: Ensure files end with a newline
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
