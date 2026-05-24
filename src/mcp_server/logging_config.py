@@ -125,8 +125,7 @@ def configure_library_loggers(settings: LoggingSettings) -> None:
         name
         for name in logging.Logger.manager.loggerDict
         if any(
-            name == prefix or name.startswith(f"{prefix}.")
-            for prefix in _LIBRARY_LOGGER_PREFIXES
+            name == prefix or name.startswith(f"{prefix}.") for prefix in _LIBRARY_LOGGER_PREFIXES
         )
     }
     logger_names.update(_LIBRARY_LOGGER_PREFIXES)

@@ -25,7 +25,9 @@ def register_browser_tools(
     @mcp.tool(
         name="browser_search",
         description=(
-            "Run a browser-driven search on public search pages and return structured results."
+            "Execute a comprehensive browser-driven search using public search engines (e.g., Bing). "
+            "Returns structured search results including titles, URLs, and snippets. "
+            "Best used for gathering real-time information from the web."
         ),
     )
     @log_mcp_tool("browser_search", settings.logging)
@@ -38,6 +40,17 @@ def register_browser_tools(
         force_refresh: bool = False,
         filter_ads: bool = True,
     ) -> list[Any]:
+        """Run a web search and return results.
+
+        Args:
+            query: The search keywords or natural language question.
+            provider: The search engine provider to use (currently supports 'bing').
+            max_results: Maximum number of search results to return.
+            include_summary: Whether to include an AI-generated summary of the results (if supported).
+            use_cache: If True, returns cached results if available to save time and resources.
+            force_refresh: If True, bypasses the cache and performs a fresh search.
+            filter_ads: Whether to exclude advertisements and sponsored content from results.
+        """
         from mcp.types import TextContent
 
         response = await browser_search_service.search(
@@ -66,8 +79,9 @@ def register_browser_tools(
     @mcp.tool(
         name="browser_create_session",
         description=(
-            "Create a reusable browser session for low-level page operations. "
-            "Supports loading from a previously saved storage state (state_name)."
+            "Initialize a new stateful browser session. "
+            "Allows for complex multi-step interactions (e.g., login, form filling). "
+            "Can optionally load a saved storage state (cookies, localStorage) by state_name."
         ),
         structured_output=True,
     )
@@ -76,6 +90,12 @@ def register_browser_tools(
         headless: bool | None = None,
         state_name: str | None = None,
     ) -> dict[str, Any]:
+        """Create a reusable browser session.
+
+        Args:
+            headless: Whether to run the browser in headless mode (default: True).
+            state_name: Optional name of a previously saved session state to restore.
+        """
         storage_state_path = None
         if state_name:
             import re
@@ -97,16 +117,22 @@ def register_browser_tools(
 
     @mcp.tool(
         name="browser_open",
-        description="Open a URL inside an existing browser session.",
+        description="Navigate to a specific URL within an active browser session.",
         structured_output=True,
     )
     @log_mcp_tool("browser_open", settings.logging)
     async def browser_open(session_id: str, url: str) -> dict[str, Any]:
+        """Open a URL in a session.
+
+        Args:
+            session_id: The ID of the active browser session.
+            url: The destination web address.
+        """
         return await session_manager.open(session_id, url)
 
     @mcp.tool(
         name="browser_fill",
-        description="Fill an input field inside an existing browser session.",
+        description="Type text into an input field or textarea identified by a CSS selector.",
         structured_output=True,
     )
     @log_mcp_tool("browser_fill", settings.logging)
@@ -116,11 +142,19 @@ def register_browser_tools(
         value: str,
         clear: bool = True,
     ) -> dict[str, Any]:
+        """Fill an input field.
+
+        Args:
+            session_id: The ID of the active browser session.
+            selector: The CSS selector of the input element (e.g., 'input[name="q"]', '#search').
+            value: The text content to enter.
+            clear: Whether to clear the field before typing (default: True).
+        """
         return await session_manager.fill(session_id, selector, value, clear=clear)
 
     @mcp.tool(
         name="browser_click",
-        description="Click an element inside an existing browser session.",
+        description="Click a button, link, or other clickable element identified by a CSS selector.",
         structured_output=True,
     )
     @log_mcp_tool("browser_click", settings.logging)
@@ -129,6 +163,13 @@ def register_browser_tools(
         selector: str,
         wait_for_network_idle: bool = True,
     ) -> dict[str, Any]:
+        """Click an element.
+
+        Args:
+            session_id: The ID of the active browser session.
+            selector: The CSS selector of the element to click.
+            wait_for_network_idle: Whether to wait for network requests to finish after the click.
+        """
         return await session_manager.click(
             session_id,
             selector,
@@ -137,7 +178,10 @@ def register_browser_tools(
 
     @mcp.tool(
         name="browser_extract",
-        description="Extract text and optional links from the current browser page.",
+        description=(
+            "Extract structured text and links from the current page. "
+            "Can be scoped to a specific element using a CSS selector."
+        ),
     )
     @log_mcp_tool("browser_extract", settings.logging)
     async def browser_extract(
@@ -146,6 +190,14 @@ def register_browser_tools(
         include_links: bool = False,
         max_links: int = 10,
     ) -> list[Any]:
+        """Extract content from the page.
+
+        Args:
+            session_id: The ID of the active browser session.
+            selector: Optional CSS selector to limit extraction to a specific element.
+            include_links: Whether to extract hyperlinks found within the content.
+            max_links: Maximum number of links to return if include_links is True.
+        """
         from mcp.types import TextContent
 
         extracted = await session_manager.extract(

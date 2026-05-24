@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -23,8 +22,9 @@ def register_rendering_tools(
     @mcp.tool(
         name="render_content_to_image",
         description=(
-            "Render raw HTML or Markdown content into a high-quality PNG image. "
-            "Returns the local file path and a base64-encoded image string."
+            "Convert raw HTML or Markdown content into a high-fidelity PNG image. "
+            "Useful for visualizing complex layouts, formatted text, or previewing web content "
+            "directly within the AI conversation."
         ),
     )
     @log_mcp_tool("render_content_to_image", logging_settings)
@@ -36,17 +36,16 @@ def register_rendering_tools(
         height: int | None = None,
         output_path: str | None = None,
     ) -> list[Any]:
-        """Convert HTML or Markdown to an image and return structured results.
+        """Convert HTML or Markdown to an image.
 
         Args:
-            content: The raw HTML or Markdown content to render.
-            input_format: The format of the content, either 'html' or 'markdown'.
-            theme: The color theme for Markdown styling ('light' or 'dark'). Defaults to 'light'.
-            width: The target viewport width in pixels. Defaults to 800.
-            height: The target viewport height in pixels. If not provided, height is dynamically
-                stretched to fit the content exactly without bottom empty space.
-            output_path: Optional file path to save the output PNG. If relative, saved in the
-                default output directory. If not provided, a random name is generated.
+            content: The raw HTML or Markdown string to be rendered.
+            input_format: The format of the input content ('html' or 'markdown').
+            theme: The visual theme for Markdown rendering ('light' or 'dark').
+            width: The target viewport width in pixels (default: 800).
+            height: The target viewport height in pixels. If None, auto-stretches to fit content.
+            output_path: Optional path to save the PNG file. Relative paths are saved in the
+                default render directory.
         """
         from mcp.types import ImageContent, TextContent
 
@@ -77,8 +76,9 @@ def register_rendering_tools(
     @mcp.tool(
         name="render_data_chart",
         description=(
-            "Generate a beautiful data chart (line, bar, pie, radar, scatter) as a PNG image "
-            "using Apache ECharts. High-fidelity dynamic styling included."
+            "Generate professional data visualizations (line, bar, pie, radar, scatter) as "
+            "high-quality PNG images using Apache ECharts. "
+            "Perfect for presenting data insights visually to the user."
         ),
     )
     @log_mcp_tool("render_data_chart", logging_settings)
@@ -91,18 +91,17 @@ def register_rendering_tools(
         height: int = 600,
         output_path: str | None = None,
     ) -> list[Any]:
-        """Convert a structured data payload into an exquisite ECharts visualization snapshot.
+        """Generate a data chart image.
 
         Args:
-            chart_type: The visualization form, one of 'line', 'bar', 'pie', 'radar', 'scatter'.
-            data: Standard data dict containing:
-                - labels: list of strings (x-axis category labels or indicator keys)
-                - datasets: list of objects with 'label' (name) and 'data' (values)
-                - ECharts custom configuration under the special "option" key overrides all mapping.
-            title: The title text rendered at the top center of the chart.
-            theme: The visual aesthetic theme, either 'light' or 'dark'. Defaults to 'light'.
-            width: Viewport rendering width in pixels. Defaults to 800.
-            height: Viewport rendering height in pixels. Defaults to 600.
+            chart_type: The type of chart to generate.
+            data: Structured data for the chart. Must include 'labels' (list of strings) and
+                'datasets' (list of objects with 'label' and 'data' keys).
+                Alternatively, provide a full ECharts 'option' object for complete control.
+            title: The main title displayed on the chart.
+            theme: The visual aesthetic theme ('light' or 'dark').
+            width: The image width in pixels (default: 800).
+            height: The image height in pixels (default: 600).
             output_path: Optional exact path to save the output PNG file.
         """
         from mcp.types import ImageContent, TextContent

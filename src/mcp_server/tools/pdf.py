@@ -25,8 +25,9 @@ def register_pdf_tools(
     @mcp.tool(
         name="browser_render_pdf",
         description=(
-            "Render specified pages (or all pages) of a local PDF document into high-fidelity "
-            "PNG images. Returns the file paths and base64-encoded image strings."
+            "Render specific pages of a local PDF document into high-fidelity PNG images. "
+            "Essential for multi-modal AI to 'see' and analyze the visual layout, charts, "
+            "and images within a PDF."
         ),
     )
     @log_mcp_tool("browser_render_pdf", logging_settings)
@@ -35,13 +36,14 @@ def register_pdf_tools(
         pages: list[int] | None = None,
         dpi: int = 150,
     ) -> list[Any]:
-        """Render pages of a PDF to images for multi-modal processing.
+        """Render PDF pages to images.
 
         Args:
-            pdf_path: The local absolute or project-relative file path to the PDF document.
-            pages: An optional list of 1-indexed page numbers to render. If not provided,
-                renders all pages.
-            dpi: The target resolution (dots per inch) for page visual rendering. Defaults to 150.
+            pdf_path: The local filesystem path to the PDF file (absolute or project-relative).
+            pages: List of 1-indexed page numbers to render (e.g., [1, 3, 5]).
+                If None, all pages are rendered.
+            dpi: Resolution for rendering (default: 150). Higher DPI means better quality but
+                larger images.
         """
         from mcp.types import ImageContent, TextContent
 
@@ -75,9 +77,7 @@ def register_pdf_tools(
         for idx in pages_to_render:
             png_bytes, file_path = await pdf_service.render_pdf_page(path, idx, dpi=dpi)
             base64_img = base64.b64encode(png_bytes).decode("utf-8")
-            contents.append(
-                TextContent(type="text", text=f"Page {idx + 1} saved to: {file_path}")
-            )
+            contents.append(TextContent(type="text", text=f"Page {idx + 1} saved to: {file_path}"))
             contents.append(
                 ImageContent(
                     type="image",
@@ -91,8 +91,8 @@ def register_pdf_tools(
     @mcp.tool(
         name="browser_extract_pdf_text",
         description=(
-            "Extract structure-preserving plain text from specified pages (or all pages) "
-            "of a local PDF document."
+            "Extract structure-preserving plain text from specific pages of a local PDF document. "
+            "Use this for fast text analysis, searching, or summarization of PDF content."
         ),
     )
     @log_mcp_tool("browser_extract_pdf_text", logging_settings)
@@ -100,12 +100,12 @@ def register_pdf_tools(
         pdf_path: str,
         pages: list[int] | None = None,
     ) -> list[Any]:
-        """Extract high-fidelity plain text from pages of a PDF document.
+        """Extract text from PDF pages.
 
         Args:
-            pdf_path: The local absolute or project-relative file path to the PDF document.
-            pages: An optional list of 1-indexed page numbers to extract text from.
-                If not provided, extracts text from all pages.
+            pdf_path: The local filesystem path to the PDF file (absolute or project-relative).
+            pages: List of 1-indexed page numbers to extract text from (e.g., [1, 2]).
+                If None, extracts from all pages.
         """
         from mcp.types import TextContent
 
@@ -133,7 +133,10 @@ def register_pdf_tools(
         contents.append(
             TextContent(
                 type="text",
-                text=f"Extracted {len(pages_to_extract)} pages from {path.name} (Total: {total_pages})",
+                text=(
+                    f"Extracted {len(pages_to_extract)} pages from {path.name} "
+                    f"(Total: {total_pages})"
+                ),
             )
         )
 

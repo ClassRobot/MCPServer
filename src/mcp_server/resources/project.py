@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-
 from mcp_server.services.query_history import QueryHistoryService
 
 
@@ -36,7 +35,9 @@ def register_project_resources(
 
         lines = ["## Recent Query History", ""]
         for record in records:
-            lines.append(f"- **{record.query}** (via {record.provider}, tool: {record.source_tool})")
+            lines.append(
+                f"- **{record.query}** (via {record.provider}, tool: {record.source_tool})"
+            )
             lines.append(f"  *Time: {record.created_at}*")
             if record.notes:
                 lines.append(f"  *Notes: {record.notes}*")
