@@ -55,7 +55,19 @@ docker compose -f docker-compose.dev.yml up --build
    - 摒弃极其臃肿复杂的 Poppler 依赖，引入 **`pypdfium2`** (Google PDFium) 和 **`pypdf`** 纯 Python 引擎。
    - 提供非阻塞式线程池托管的高清多页视觉光栅化渲染及结构化文本提取能力。
 
+5. **Office 办公文档图像渲染器 (`browser_render_docx` / `browser_render_pptx`)**
+   - 通过极轻量且高度兼容的无头 **LibreOffice** 命令行进程，实现 Word（.docx）与 PowerPoint（.pptx）文档的秒级高清光栅化渲染。
+   - **智能定位器**：自适应搜寻系统 PATH、Windows 注册表、标准 Program Files 路径以及 **Windows Scoop 默认沙盒路径**，实现零配置开箱即用。
+
 ---
+
+## 🔒 严格网络资源模式 (Strict Network Resource Mode)
+
+为了防止 MCP 服务端与 AI 客户端运行在不同主机（如隔离容器、远程虚拟机或 SaaS 云端）时，本地物理文件路径对 AI 造成误导或泄露服务器隐私，**本项目全面启用了严格网络资源模式**：
+
+*   **物理路径隐去**：所有工具（网页截图、PDF 渲染、数据图表、Office 文档渲染等）的返回信息中，**严格不含任何服务器本地物理磁盘路径**（如 `C:\...\mcp-server\runtime\...`）。
+*   **原生 MCP Resource 访问**：系统统一且唯一返回符合 MCP 协议规范的 **Resource URIs**（格式为 `render://{filename}`）以及 Base64 编码的行内 `ImageContent`。
+*   **免除额外端口服务**：客户端（如 Cursor / Claude Desktop）通过现有的 JSON-RPC 长连接通道发送标准的 `resources/read` 请求，即可实现跨网络下载和预览生成的文件。**完全不需要开辟额外的 HTTP 服务器，也不需要映射任何额外的网络端口**，极度安全且轻量。
 
 ## 常用开发命令
 ```bash
