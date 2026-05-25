@@ -9,7 +9,7 @@ default_stages: [pre-commit]
 repos:
   # 1. uv hooks to automatically keep uv.lock synchronized and export standard requirements files
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.5.21
+    rev: 0.11.16
     hooks:
       - id: uv-lock
         name: uv-lock (Auto-update and validate uv.lock)
@@ -22,7 +22,7 @@ repos:
 
   # 2. Ruff hooks for ultra-fast Python linting, auto-fixing, and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.3
+    rev: v0.15.14
     hooks:
       - id: ruff
         name: ruff (Lint and Auto-fix)
@@ -32,7 +32,7 @@ repos:
 
   # 3. Standard pre-commit hooks for file sanitization and basic syntax validation
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
         name: Check for large files
