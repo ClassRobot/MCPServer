@@ -14,6 +14,7 @@ from .config import ServerSettings, load_server_settings
 from .prompts import register_prompts
 from .resources import register_resources
 from .services.browser_search import BrowserSearchService
+from .services.office import OfficeDocumentService
 from .services.pdf_reader import PDFReadingService
 from .services.query_history import QueryHistoryService
 from .services.rendering import ContentRenderingService
@@ -46,6 +47,10 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
     )
     query_history_service = QueryHistoryService(database_manager)
     pdf_service = PDFReadingService(default_output_dir=active_settings.render_output_dir)
+    office_service = OfficeDocumentService(
+        default_output_dir=active_settings.render_output_dir,
+        pdf_service=pdf_service,
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastMCP):
@@ -76,6 +81,7 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         query_history_service=query_history_service,
         rendering_service=rendering_service,
         pdf_service=pdf_service,
+        office_service=office_service,
     )
     register_resources(
         mcp,

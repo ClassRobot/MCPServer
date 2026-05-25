@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp_server.adapters.browser_session import BrowserSessionManager
 from mcp_server.config import ServerSettings
 from mcp_server.services.browser_search import BrowserSearchService
+from mcp_server.services.office import OfficeDocumentService
 from mcp_server.services.pdf_reader import PDFReadingService
 from mcp_server.services.query_history import QueryHistoryService
 from mcp_server.services.rendering import ContentRenderingService
@@ -14,6 +15,7 @@ from mcp_server.services.rendering import ContentRenderingService
 from .browser import register_browser_tools
 from .database import register_database_tools
 from .health import register_health_tools
+from .office_tools import register_office_tools
 from .pdf import register_pdf_tools
 from .rendering import register_rendering_tools
 
@@ -27,6 +29,7 @@ def register_tools(
     query_history_service: QueryHistoryService,
     rendering_service: ContentRenderingService,
     pdf_service: PDFReadingService,
+    office_service: OfficeDocumentService,
 ) -> None:
     """Register all MCP tools exposed by this project."""
     register_health_tools(mcp, logging_settings=settings.logging)
@@ -49,6 +52,12 @@ def register_tools(
     register_pdf_tools(
         mcp,
         pdf_service=pdf_service,
+        project_root=settings.project_root,
+        logging_settings=settings.logging,
+    )
+    register_office_tools(
+        mcp,
+        office_service=office_service,
         project_root=settings.project_root,
         logging_settings=settings.logging,
     )

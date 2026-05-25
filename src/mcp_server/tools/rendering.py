@@ -62,7 +62,6 @@ def register_rendering_tools(
         description = (
             f"Successfully rendered {input_format} content to image.\n"
             f"Dimensions: {result.width}x{result.height}px\n"
-            f"Local Path: {result.file_path}\n"
             f"Resource URI: render://{Path(result.file_path).name}"
         )
 
@@ -121,7 +120,6 @@ def register_rendering_tools(
         description = (
             f"Successfully generated {chart_type} chart: {title or 'Untitled'}\n"
             f"Dimensions: {result.width}x{result.height}px\n"
-            f"Local Path: {result.file_path}\n"
             f"Resource URI: render://{Path(result.file_path).name}"
         )
 

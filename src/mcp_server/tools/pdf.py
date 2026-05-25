@@ -81,11 +81,7 @@ def register_pdf_tools(
             contents.append(
                 TextContent(
                     type="text",
-                    text=(
-                        f"Page {idx + 1} saved to:\n"
-                        f"  - Local Path: {file_path}\n"
-                        f"  - Resource URI: render://{file_name}"
-                    ),
+                    text=(f"Page {idx + 1} rendering:\n  - Resource URI: render://{file_name}"),
                 )
             )
             contents.append(

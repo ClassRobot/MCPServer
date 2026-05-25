@@ -340,7 +340,6 @@ def register_browser_tools(
         description = (
             f"Screenshot of {url} captured successfully.\n"
             f"Dimensions: {width}x{actual_height}px\n"
-            f"Local Path: {resolved_path}\n"
             f"Resource URI: render://{resolved_path.name}"
         )
 
