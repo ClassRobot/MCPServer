@@ -90,7 +90,7 @@ uv run alembic upgrade head
 uv run mcp-server --transport streamable-http
 ```
 
-代码运行时会自动把 PostgreSQL URL 规范化为 `postgresql+asyncpg://...`。  
+代码运行时会自动把 PostgreSQL URL 规范化为 `postgresql+asyncpg://...`。
 测试时允许使用 `sqlite://...`，内部会被转成 `sqlite+aiosqlite://...`，这样不用起本地 PostgreSQL 也能跑回归。
 
 ## 5. 开发与部署建议
