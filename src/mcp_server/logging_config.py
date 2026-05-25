@@ -142,35 +142,16 @@ def configure_library_loggers(settings: LoggingSettings) -> None:
 
 
 def configure_uvicorn_logging(settings: LoggingSettings) -> None:
-    """Make Uvicorn use the same terminal and file log format as the app."""
+    """Make Uvicorn use the same terminal and file log format as the app.
+
+    To prevent duplicate file handlers opening the same file (which crashes on
+    daily rotation on Windows), we route Uvicorn loggers to propagate to the
+    root logger instead of having their own handlers.
+    """
     try:
         import uvicorn.config
     except ImportError:
         return
-
-    handlers: dict[str, dict[str, Any]] = {}
-    handler_names: list[str] = []
-
-    if settings.console_enabled:
-        handlers["default"] = {
-            "class": "logging.StreamHandler",
-            "formatter": "console",
-            "stream": "ext://sys.stderr",
-        }
-        handler_names.append("default")
-
-    if settings.file_enabled:
-        settings.file_path.parent.mkdir(parents=True, exist_ok=True)
-        handlers["file"] = {
-            "class": "logging.handlers.TimedRotatingFileHandler",
-            "formatter": "file",
-            "filename": str(settings.file_path),
-            "when": "midnight",
-            "interval": 1,
-            "backupCount": settings.retention_days,
-            "encoding": "utf-8",
-        }
-        handler_names.append("file")
 
     uvicorn_log_config = deepcopy(uvicorn.config.LOGGING_CONFIG)
     uvicorn_log_config["formatters"] = {
@@ -178,17 +159,13 @@ def configure_uvicorn_logging(settings: LoggingSettings) -> None:
             "()": "mcp_server.logging_config.KeyValueFormatter",
             "use_colors": settings.console_color_enabled,
         },
-        "file": {
-            "()": "mcp_server.logging_config.KeyValueFormatter",
-            "use_colors": False,
-        },
     }
-    uvicorn_log_config["handlers"] = handlers
+    uvicorn_log_config["handlers"] = {}
     uvicorn_log_config["loggers"] = {
         logger_name: {
-            "handlers": handler_names,
+            "handlers": [],
             "level": settings.level,
-            "propagate": False,
+            "propagate": True,
         }
         for logger_name in _UVICORN_LOGGER_NAMES
     }

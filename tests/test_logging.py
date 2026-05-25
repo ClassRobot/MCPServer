@@ -222,16 +222,9 @@ def test_configure_logging_overrides_uvicorn_log_config(tmp_path: Path) -> None:
         "()": "mcp_server.logging_config.KeyValueFormatter",
         "use_colors": True,
     }
-    assert log_config["formatters"]["file"] == {
-        "()": "mcp_server.logging_config.KeyValueFormatter",
-        "use_colors": False,
-    }
-    assert log_config["handlers"]["default"]["formatter"] == "console"
-    assert log_config["handlers"]["default"]["stream"] == "ext://sys.stderr"
-    assert log_config["handlers"]["file"]["formatter"] == "file"
-    assert log_config["handlers"]["file"]["filename"] == str(log_path)
-    assert log_config["loggers"]["uvicorn.access"]["handlers"] == ["default", "file"]
-    assert log_config["loggers"]["uvicorn.access"]["propagate"] is False
+    assert log_config["handlers"] == {}
+    assert log_config["loggers"]["uvicorn.access"]["handlers"] == []
+    assert log_config["loggers"]["uvicorn.access"]["propagate"] is True
 
 
 @pytest.mark.asyncio
