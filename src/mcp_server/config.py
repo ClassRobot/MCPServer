@@ -437,9 +437,9 @@ def _read_provider_setting(
     candidate = env_value if env_value is not None else config_value
     if candidate is None:
         return default
-    if candidate != "bing":
-        raise ValueError(f"{env_name} only supports 'bing' in the current version.")
-    return "bing"
+    if candidate not in {"bing", "baidu"}:
+        raise ValueError(f"{env_name} only supports 'bing' or 'baidu' in the current version.")
+    return candidate  # type: ignore
 
 
 def _read_path_setting(

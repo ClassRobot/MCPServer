@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 
+from .adapters.baidu_provider import BaiduSearchProvider
 from .adapters.bing_provider import BingSearchProvider
 from .adapters.browser_session import BrowserSessionManager
 from .adapters.database import DatabaseManager
@@ -36,7 +37,10 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
     browser_search_service = BrowserSearchService(
         session_manager=session_manager,
         cache_store=cache_store,
-        providers={"bing": BingSearchProvider(active_settings.browser_search.browser)},
+        providers={
+            "bing": BingSearchProvider(active_settings.browser_search.browser),
+            "baidu": BaiduSearchProvider(active_settings.browser_search.browser),
+        },
         result_filter=result_filter,
         browser_settings=active_settings.browser_search.browser,
         cache_settings=active_settings.browser_search.cache,
