@@ -1,4 +1,4 @@
-"""MCP tools for rendering DOCX and PPTX documents to high-fidelity preview images."""
+"""调用无头 Office 转换服务将 Word 和 PPT 文档高保真渲染为高清 PNG 预览图像的 MCP 工具接口层。"""
 
 from __future__ import annotations
 
@@ -20,7 +20,14 @@ def register_office_tools(
     project_root: Path,
     logging_settings: LoggingSettings,
 ) -> None:
-    """Register Word and PPT visual rendering tools on FastMCP."""
+    """在 FastMCP 实例上注册 Word 及 PowerPoint 高保真排版图像渲染工具。
+
+    Args:
+        mcp (FastMCP): FastMCP 服务应用程序实例。
+        office_service (OfficeDocumentService): Word/PPT 办公文档转换及渲染服务。
+        project_root (Path): 本项目根目录的物理路径，用于折算相对路径。
+        logging_settings (LoggingSettings): 全局日志记录审计配置。
+    """
 
     @mcp.tool(
         name="browser_render_docx",
@@ -36,15 +43,19 @@ def register_office_tools(
         pages: list[int] | None = None,
         dpi: int = 150,
     ) -> list[Any]:
-        """Render Word document pages to preview images.
+        """将本地 DOCX 格式的 Word 文档特定页面高保真渲染输出为 PNG 预览图。
 
         Args:
-            docx_path: Path to the Word document. Relative paths resolved against project root.
-            pages: Optional list of 1-indexed page numbers to render. If omitted, renders all.
-            dpi: Target visual resolution (DPI). Defaults to 150.
+            docx_path (str): Word 文档在磁盘上的路径，相对路径会基于项目根目录自动折算。
+            pages (list[int] | None): 待渲染的基于 1 开始索引的页码列表；若为 None 则默认渲染全部页面。
+            dpi (int): 渲染的目标分辨率精度 (DPI)，默认值为 150。
+
+        Returns:
+            list[Any]: 包含说明文本、动态资源 URI 路径及 Base64 编码图像数据的 MCP 混合资产列表。
         """
         from mcp.types import ImageContent, TextContent
 
+        # 折算相对路径为绝对路径
         path = Path(docx_path)
         if not path.is_absolute():
             path = (project_root / path).resolve()
@@ -52,6 +63,7 @@ def register_office_tools(
         if not path.is_file():
             raise FileNotFoundError(f"Word document file does not exist: {docx_path}")
 
+        # 调用核心办公文档转换服务转换并渲染为高清图像
         rendered_pages = await office_service.render_document(
             path,
             pages=pages,
@@ -65,6 +77,7 @@ def register_office_tools(
         )
         contents.append(TextContent(type="text", text=description))
 
+        # 逐页封包图像资产及资源 URI
         for idx, (png_bytes, file_path) in enumerate(rendered_pages):
             filename = file_path.name
             contents.append(
@@ -100,15 +113,19 @@ def register_office_tools(
         slides: list[int] | None = None,
         dpi: int = 150,
     ) -> list[Any]:
-        """Render PowerPoint slides to preview images.
+        """将本地 PPTX 格式的 PowerPoint 幻灯片特定页面高保真渲染输出为 PNG 预览图。
 
         Args:
-            pptx_path: Path to the target PPTX file. Relative paths resolved against project root.
-            slides: Optional list of 1-indexed slide numbers to render (default: all slides).
-            dpi: Target visual resolution (DPI). Defaults to 150.
+            pptx_path (str): PPTX 文件的物理路径，相对路径自动折算。
+            slides (list[int] | None): 待渲染的基于 1 开始索引的幻灯片页码列表；若为 None 则默认渲染全部。
+            dpi (int): 渲染的目标分辨率精度 (DPI)，默认值为 150。
+
+        Returns:
+            list[Any]: 包含说明文本、动态资源 URI 路径及 Base64 编码图像数据的 MCP 混合资产列表。
         """
         from mcp.types import ImageContent, TextContent
 
+        # 折算相对路径为绝对路径
         path = Path(pptx_path)
         if not path.is_absolute():
             path = (project_root / path).resolve()
@@ -116,6 +133,7 @@ def register_office_tools(
         if not path.is_file():
             raise FileNotFoundError(f"PowerPoint file does not exist: {pptx_path}")
 
+        # 调用办公文档服务完成渲染转换
         rendered_slides = await office_service.render_document(
             path,
             pages=slides,
@@ -129,6 +147,7 @@ def register_office_tools(
         )
         contents.append(TextContent(type="text", text=description))
 
+        # 逐页封包图像资产及资源 URI
         for idx, (png_bytes, file_path) in enumerate(rendered_slides):
             filename = file_path.name
             contents.append(

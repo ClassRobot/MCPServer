@@ -1,4 +1,4 @@
-"""Prompt definitions for planning and requirement clarification."""
+"""规划分析及需求梳理的提示词模板定义。"""
 
 from __future__ import annotations
 
@@ -6,10 +6,13 @@ from mcp.server.fastmcp import FastMCP
 
 
 def summarize_request(task: str) -> str:
-    """Build a reusable prompt template for requirement clarification and execution planning.
+    """构建用于需求梳理与执行规划的可复用系统级提示词模板。
 
     Args:
-        task: The user's natural language request or a technical task description.
+        task (str): 用户输入的自然语言请求或具体技术任务描述。
+
+    Returns:
+        str: 拼装好的系统级架构分析提示词模板。
     """
     return (
         "You are an expert system architect and lead developer. Please analyze the following "
@@ -28,7 +31,11 @@ def summarize_request(task: str) -> str:
 
 
 def register_planning_prompts(mcp: FastMCP) -> None:
-    """Register planning-related prompts on the FastMCP application."""
+    """向 FastMCP 应用注册与任务规划相关的提示词模板。
+
+    Args:
+        mcp (FastMCP): 待注册提示词的 FastMCP 服务实例。
+    """
     mcp.prompt(
         name="summarize_request",
         description=(

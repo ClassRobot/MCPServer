@@ -1,4 +1,4 @@
-"""MCP tools for rendering HTML and Markdown content into high-quality images."""
+"""基于 Playwright 无头浏览器及 Apache ECharts 数据可视化引擎执行高保真排版图像渲染的 MCP 工具接口层。"""
 
 from __future__ import annotations
 
@@ -18,7 +18,13 @@ def register_rendering_tools(
     rendering_service: ContentRenderingService,
     logging_settings: LoggingSettings,
 ) -> None:
-    """Register HTML and Markdown image rendering tools."""
+    """在 FastMCP 实例上注册内容排版及图表可视化渲染工具。
+
+    Args:
+        mcp (FastMCP): FastMCP 服务应用程序实例。
+        rendering_service (ContentRenderingService): Markdown/HTML 栅格化排版渲染及 ECharts 图表生成服务。
+        logging_settings (LoggingSettings): 全局日志记录审计配置。
+    """
 
     @mcp.tool(
         name="render_content_to_image",
@@ -37,19 +43,22 @@ def register_rendering_tools(
         height: int | None = None,
         output_path: str | None = None,
     ) -> list[Any]:
-        """Convert HTML or Markdown to an image.
+        """将指定的 HTML 或 Markdown 裸文本段落高保真排版渲染为高清 PNG 预览图。
 
         Args:
-            content: The raw HTML or Markdown string to be rendered.
-            input_format: The format of the input content ('html' or 'markdown').
-            theme: The visual theme for Markdown rendering ('light' or 'dark').
-            width: The target viewport width in pixels (default: 800).
-            height: The target viewport height in pixels. If None, auto-stretches to fit content.
-            output_path: Optional path to save the PNG file. Relative paths are saved in the
-                default render directory.
+            content (str): HTML 或 Markdown 原始文本串。
+            input_format (Literal["html", "markdown"]): 输入文本的物理格式。
+            theme (Literal["light", "dark"]): 视觉风格主题，支持 'light' 或 'dark'。默认值为 'light'。
+            width (int): 渲染视口像素宽度，默认值为 800。
+            height (int | None): 渲染视口像素高度。若为 None 则自适应内容实际物理高度。
+            output_path (str | None): 可选的实体 PNG 文件保存路径。
+
+        Returns:
+            list[Any]: 包含说明、动态资源 URI 路径及 Base64 编码图像数据的 MCP 混合资产列表。
         """
         from mcp.types import ImageContent, TextContent
 
+        # 调用排版渲染服务执行端到端无头截图
         result = await rendering_service.render(
             content=content,
             input_format=input_format,
@@ -92,21 +101,23 @@ def register_rendering_tools(
         height: int = 600,
         output_path: str | None = None,
     ) -> list[Any]:
-        """Generate a data chart image.
+        """使用现代 Apache ECharts 可视化引擎绘制极高画质的折线/柱状/饼图/雷达/散点图。
 
         Args:
-            chart_type: The type of chart to generate.
-            data: Structured data for the chart. Must include 'labels' (list of strings) and
-                'datasets' (list of objects with 'label' and 'data' keys).
-                Alternatively, provide a full ECharts 'option' object for complete control.
-            title: The main title displayed on the chart.
-            theme: The visual aesthetic theme ('light' or 'dark').
-            width: The image width in pixels (default: 800).
-            height: The image height in pixels (default: 600).
-            output_path: Optional exact path to save the output PNG file.
+            chart_type (Literal["line", "bar", "pie", "radar", "scatter"]): 目标图表种类。
+            data (dict[str, Any]): 包含 labels 及 datasets 的结构化数据或完全自定义的 option 选项字典。
+            title (str | None): 图表的顶部主标题。
+            theme (Literal["light", "dark"]): 主题美学风格，支持 'light' 或 'dark'。
+            width (int): 生成图像宽度，默认值为 800。
+            height (int): 生成图像高度，默认值为 600。
+            output_path (str | None): 可选的实体 PNG 文件保存路径。
+
+        Returns:
+            list[Any]: 包含说明、动态资源 URI 路径及 Base64 编码图像数据的 MCP 混合资产列表。
         """
         from mcp.types import ImageContent, TextContent
 
+        # 调用图表生成服务进行渲染截图
         result = await rendering_service.render_chart(
             chart_type=chart_type,
             data=data,

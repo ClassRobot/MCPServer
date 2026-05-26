@@ -1,4 +1,4 @@
-"""MCP tools for database-backed query history operations."""
+"""与关系型数据库持久化交互相关的 MCP 工具接口定义。"""
 
 from __future__ import annotations
 
@@ -17,7 +17,13 @@ def register_database_tools(
     query_history_service: QueryHistoryService,
     logging_settings: LoggingSettings,
 ) -> None:
-    """Register database-backed tools that validate persistence wiring end to end."""
+    """注册用于录入及调取底层数据库查询历史记录的 MCP 工具。
+
+    Args:
+        mcp (FastMCP): FastMCP 服务应用程序实例。
+        query_history_service (QueryHistoryService): 检索查询历史记录持久化服务。
+        logging_settings (LoggingSettings): 全局日志记录审计配置。
+    """
 
     @mcp.tool(
         name="database_record_query",
@@ -33,16 +39,20 @@ def register_database_tools(
         source_tool: str = "manual",
         notes: str | None = None,
     ) -> list[Any]:
-        """Save a query record.
+        """向关系型数据库持久化录入一条检索历史记录。
 
         Args:
-            query: The actual search string or question that was asked.
-            provider: The name of the service provider used (e.g., 'bing', 'internal').
-            source_tool: The name of the tool that triggered this record.
-            notes: Optional additional context or observations about the query.
+            query (str): 被检索的原始用户提示词短语。
+            provider (str): 搜索引擎名称标识，默认值为 "manual"。
+            source_tool (str): 写入该条记录的触发工具标识，默认值为 "manual"。
+            notes (str | None): 可选的补充元数据或上下文关联备注。
+
+        Returns:
+            list[Any]: MCP 包装好的成功确认文本。
         """
         from mcp.types import TextContent
 
+        # 调用领域服务持久化数据
         record = await query_history_service.record_query(
             query=query,
             provider=provider,
@@ -65,10 +75,13 @@ def register_database_tools(
     )
     @log_mcp_tool("database_list_query_history", logging_settings)
     async def database_list_query_history(limit: int = 10) -> list[Any]:
-        """List recent queries.
+        """从数据库拉取最新的若干条搜索记录，并拼装为易读清单。
 
         Args:
-            limit: Maximum number of records to retrieve (default: 10).
+            limit (int): 返回结果的最大历史记录限制，默认值为 10。
+
+        Returns:
+            list[Any]: MCP 包装好的历史排版文本清单。
         """
         from mcp.types import TextContent
 
@@ -77,6 +90,7 @@ def register_database_tools(
             return [TextContent(type="text", text="No query history found.")]
 
         lines = [f"Showing last {len(records)} query records:", ""]
+        # 逐条拼接显示时间、搜索词及提供商
         for record in records:
             lines.append(f"- [{record.created_at}] {record.query} ({record.provider})")
 

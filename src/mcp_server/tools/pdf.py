@@ -1,4 +1,4 @@
-"""MCP tools for high-fidelity PDF reading, visual rendering, and text extraction."""
+"""调用纯 Python 无 poppler 依赖 PDF 核心服务执行高保真视觉渲染及文本提取的 MCP 工具接口层。"""
 
 from __future__ import annotations
 
@@ -20,7 +20,14 @@ def register_pdf_tools(
     project_root: Path,
     logging_settings: LoggingSettings,
 ) -> None:
-    """Register pure-Python poppler-free PDF reading and visual rendering tools."""
+    """在 FastMCP 实例上注册 PDF 文件提取及高保真排版图像渲染工具。
+
+    Args:
+        mcp (FastMCP): FastMCP 服务应用程序实例。
+        pdf_service (PDFReadingService): PDF 文档高保真提取及渲染服务。
+        project_root (Path): 本项目根目录的物理路径，用于折算相对路径。
+        logging_settings (LoggingSettings): 全局日志记录审计配置。
+    """
 
     @mcp.tool(
         name="browser_render_pdf",
@@ -36,17 +43,19 @@ def register_pdf_tools(
         pages: list[int] | None = None,
         dpi: int = 150,
     ) -> list[Any]:
-        """Render PDF pages to images.
+        """将本地 PDF 文件的指定页面高保真渲染输出为 PNG 图像。
 
         Args:
-            pdf_path: The local filesystem path to the PDF file (absolute or project-relative).
-            pages: List of 1-indexed page numbers to render (e.g., [1, 3, 5]).
-                If None, all pages are rendered.
-            dpi: Resolution for rendering (default: 150). Higher DPI means better quality but
-                larger images.
+            pdf_path (str): 本地 PDF 文件的路径，支持相对路径（自动折算）。
+            pages (list[int] | None): 基于 1 开始的待渲染页码列表，若为 None 则默认渲染全部页面。
+            dpi (int): 渲染的分辨率精度 (DPI)，默认值为 150。
+
+        Returns:
+            list[Any]: 包含说明、动态资源 URI 路径及 Base64 编码图像数据的 MCP 混合资产列表。
         """
         from mcp.types import ImageContent, TextContent
 
+        # 折算路径
         path = Path(pdf_path)
         if not path.is_absolute():
             path = (project_root / path).resolve()
@@ -54,6 +63,7 @@ def register_pdf_tools(
         if not path.exists():
             raise FileNotFoundError(f"PDF file does not exist at path: {path}")
 
+        # 获取文档物理总页码
         total_pages = pdf_service.get_page_count(path)
 
         if pages is None:
@@ -74,6 +84,7 @@ def register_pdf_tools(
         )
         contents.append(TextContent(type="text", text=description))
 
+        # 逐页进行渲染转换并拼装 MCP 消息体
         for idx in pages_to_render:
             png_bytes, file_path = await pdf_service.render_pdf_page(path, idx, dpi=dpi)
             base64_img = base64.b64encode(png_bytes).decode("utf-8")
@@ -106,15 +117,18 @@ def register_pdf_tools(
         pdf_path: str,
         pages: list[int] | None = None,
     ) -> list[Any]:
-        """Extract text from PDF pages.
+        """提取指定 PDF 页面中布局规整的可搜索纯文本内容。
 
         Args:
-            pdf_path: The local filesystem path to the PDF file (absolute or project-relative).
-            pages: List of 1-indexed page numbers to extract text from (e.g., [1, 2]).
-                If None, extracts from all pages.
+            pdf_path (str): 本地 PDF 文件的路径，支持相对路径。
+            pages (list[int] | None): 基于 1 开始的页码列表；若为 None 则提取全部。
+
+        Returns:
+            list[Any]: 包含结构化页面文本的 MCP 文本清单。
         """
         from mcp.types import TextContent
 
+        # 折算路径
         path = Path(pdf_path)
         if not path.is_absolute():
             path = (project_root / path).resolve()
@@ -122,6 +136,7 @@ def register_pdf_tools(
         if not path.exists():
             raise FileNotFoundError(f"PDF file does not exist at path: {path}")
 
+        # 获取文档物理总页码
         total_pages = pdf_service.get_page_count(path)
 
         if pages is None:
@@ -146,6 +161,7 @@ def register_pdf_tools(
             )
         )
 
+        # 逐页进行纯文本提取
         for idx in pages_to_extract:
             text = await pdf_service.extract_pdf_text(path, idx)
             contents.append(

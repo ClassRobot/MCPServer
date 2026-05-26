@@ -1,4 +1,8 @@
-"""MCP tools for browser-driven search and low-level browser automation."""
+"""底层浏览器自动化及高层网页搜索引擎检索的 MCP 工具接口层。
+
+该模块将 Playwright 有状态浏览器会话操作、网页截图及缓存检索服务，
+包装暴露为符合 MCP 标准规范的工具接口，供大语言模型客户端调用。
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,14 @@ def register_browser_tools(
     browser_search_service: BrowserSearchService,
     session_manager: BrowserSessionManager,
 ) -> None:
-    """Register browser search and low-level browser automation tools."""
+    """注册浏览器搜索引擎检索及有状态浏览器底层操作相关的 MCP 工具。
+
+    Args:
+        mcp (FastMCP): FastMCP 应用程序实例。
+        settings (ServerSettings): 服务端全局核心配置对象。
+        browser_search_service (BrowserSearchService): 网页多引擎高级搜索调度服务。
+        session_manager (BrowserSessionManager): 有状态浏览器会话生命周期管理器。
+    """
 
     @mcp.tool(
         name="browser_search",
@@ -40,19 +51,23 @@ def register_browser_tools(
         force_refresh: bool = False,
         filter_ads: bool = True,
     ) -> list[Any]:
-        """Run a web search and return results.
+        """运行基于真实浏览器渲染的网页检索并返回结果包。
 
         Args:
-            query: The search keywords or natural language question.
-            provider: The search engine provider to use (currently supports 'bing').
-            max_results: Maximum number of search results to return.
-            include_summary: Whether to include an AI-generated summary (if supported).
-            use_cache: If True, returns cached results if available.
-            force_refresh: If True, bypasses the cache and performs a fresh search.
-            filter_ads: Whether to exclude advertisements and sponsored content.
+            query (str): 待检索的用户自然语言词组或提问。
+            provider (str): 搜索引擎名称，当前支持 'bing' 或 'baidu'。
+            max_results (int | None): 最高保留的自然搜索项数量。
+            include_summary (bool): 是否返回前三条自然排名结果智能组合而成的简明摘要。
+            use_cache (bool): 是否启用磁盘 LRU 缓存拦截逻辑。
+            force_refresh (bool): 是否强制透传缓存直达源站刷新。
+            filter_ads (bool): 是否应用商业推广/垃圾广告清洗过滤器。
+
+        Returns:
+            list[Any]: 包含序列化后搜索自然项及元数据的 MCP 文本对象列表。
         """
         from mcp.types import TextContent
 
+        # 调用核心领域服务执行高层级多引擎聚合网页搜索
         response = await browser_search_service.search(
             query=query,
             provider=provider or settings.browser_search.browser.default_provider,
@@ -67,6 +82,7 @@ def register_browser_tools(
         if not response.results:
             lines.append("No results found.")
         else:
+            # 循环组装自然排名结果并展示 title, url, snippet
             for i, res in enumerate(response.results, 1):
                 lines.append(f"{i}. **{res.title}**")
                 lines.append(f"   URL: {res.url}")
@@ -90,16 +106,20 @@ def register_browser_tools(
         headless: bool | None = None,
         state_name: str | None = None,
     ) -> dict[str, Any]:
-        """Create a reusable browser session.
+        """初始化一个用于多步骤复杂交互的有状态浏览器沙箱会话。
 
         Args:
-            headless: Whether to run the browser in headless mode (default: True).
-            state_name: Optional name of a previously saved session state to restore.
+            headless (bool | None): 是否以无头模式启动浏览器环境。若为 None 则使用默认设置。
+            state_name (str | None): 可选的之前成功备份到磁盘的会话状态名（读取 Cookie 与 LocalStorage）。
+
+        Returns:
+            dict[str, Any]: 包含新建会话 session_id 及运行参数的元数据字典。
         """
         storage_state_path = None
         if state_name:
             import re
 
+            # 执行严格的正则防御性校验，防范文件名遍历/命令注入
             if not re.match(r"^[a-zA-Z0-9_-]+$", state_name):
                 raise ValueError(
                     "Invalid state_name. Use only letters, numbers, underscores, and hyphens."
@@ -109,6 +129,7 @@ def register_browser_tools(
             if state_file.exists():
                 storage_state_path = str(state_file)
 
+        # 调配有状态会话管理器拉起底层的 Pyppeteer/Playwright 实例
         session_info = await session_manager.create_session(
             headless=headless,
             storage_state_path=storage_state_path,
@@ -122,11 +143,14 @@ def register_browser_tools(
     )
     @log_mcp_tool("browser_open", settings.logging)
     async def browser_open(session_id: str, url: str) -> dict[str, Any]:
-        """Open a URL in a session.
+        """在当前存活的有状态浏览器会话中导航跳转到指定 URL。
 
         Args:
-            session_id: The ID of the active browser session.
-            url: The destination web address.
+            session_id (str): 有效的浏览器会话标识 ID。
+            url (str): 目标网站的绝对超链接。
+
+        Returns:
+            dict[str, Any]: 包含当前页面加载后 URL 及 Title 等基础信息的字典。
         """
         return await session_manager.open(session_id, url)
 
@@ -142,13 +166,16 @@ def register_browser_tools(
         value: str,
         clear: bool = True,
     ) -> dict[str, Any]:
-        """Fill an input field.
+        """定位特定输入框或文本域元素并安全模拟输入指定字符内容。
 
         Args:
-            session_id: The ID of the active browser session.
-            selector: The CSS selector of the input element (e.g., 'input[name="q"]', '#search').
-            value: The text content to enter.
-            clear: Whether to clear the field before typing (default: True).
+            session_id (str): 有效的浏览器会话标识 ID。
+            selector (str): 用于精准过滤元素的 CSS 选择符表达式。
+            value (str): 需要录入的文本串。
+            clear (bool): 是否在键入字符前先清空当前表单框。默认值为 True。
+
+        Returns:
+            dict[str, Any]: 提示写入结果成功状态字典。
         """
         return await session_manager.fill(session_id, selector, value, clear=clear)
 
@@ -165,12 +192,15 @@ def register_browser_tools(
         selector: str,
         wait_for_network_idle: bool = True,
     ) -> dict[str, Any]:
-        """Click an element.
+        """模拟物理鼠标左键点击选中的 DOM 节点（如按钮、链接等）。
 
         Args:
-            session_id: The ID of the active browser session.
-            selector: The CSS selector of the element to click.
-            wait_for_network_idle: Whether to wait for network requests to finish after the click.
+            session_id (str): 有效的浏览器会话标识 ID。
+            selector (str): CSS 选择符表达式。
+            wait_for_network_idle (bool): 点击动作完成后，是否安全等待页面网络载入空闲。默认值为 True。
+
+        Returns:
+            dict[str, Any]: 点击操作成功与否字典。
         """
         return await session_manager.click(
             session_id,
@@ -192,13 +222,16 @@ def register_browser_tools(
         include_links: bool = False,
         max_links: int = 10,
     ) -> list[Any]:
-        """Extract content from the page.
+        """深度提取指定页面当前渲染状态下的纯文本和超链接表单集合。
 
         Args:
-            session_id: The ID of the active browser session.
-            selector: Optional CSS selector to limit extraction to a specific element.
-            include_links: Whether to extract hyperlinks found within the content.
-            max_links: Maximum number of links to return if include_links is True.
+            session_id (str): 有效的浏览器会话标识 ID。
+            selector (str | None): 可选的 CSS 精准定位容器，若未提供则默认对全局 document 提取。
+            include_links (bool): 是否同时把元素内部的 <a> 链接列表进行统计收集。
+            max_links (int): 单个页面最高返回的外部超链接数，默认值为 10。
+
+        Returns:
+            list[Any]: MCP 标准富文本包裹提取结果。
         """
         from mcp.types import TextContent
 
@@ -216,6 +249,7 @@ def register_browser_tools(
             extracted.text,
         ]
 
+        # 如果开启了提取链接且链接列表非空，按规范格式化输出
         if extracted.links:
             lines.append("\n--- Links ---")
             for link in extracted.links:
@@ -230,6 +264,14 @@ def register_browser_tools(
     )
     @log_mcp_tool("browser_close_session", settings.logging)
     async def browser_close_session(session_id: str) -> dict[str, Any]:
+        """优雅关闭运行中的有状态浏览器会话并回收物理进程及相关端口。
+
+        Args:
+            session_id (str): 待关闭的浏览器会话标识 ID。
+
+        Returns:
+            dict[str, Any]: 回收成功与否的字典。
+        """
         return await session_manager.close_session(session_id)
 
     @mcp.tool(
@@ -242,8 +284,18 @@ def register_browser_tools(
         session_id: str,
         state_name: str,
     ) -> dict[str, Any]:
+        """将当前会话缓存的 Cookie、LocalStorage 等敏感持久化状态序列化备份至指定 json 文件。
+
+        Args:
+            session_id (str): 有效的有状态会话 ID。
+            state_name (str): 物理磁盘文件名（如 'my_login'）。
+
+        Returns:
+            dict[str, Any]: 磁盘保存的完整绝对路径及操作成功字典。
+        """
         import re
 
+        # 正则防注入边界测试
         if not re.match(r"^[a-zA-Z0-9_-]+$", state_name):
             raise ValueError(
                 "Invalid state_name. Use only letters, numbers, underscores, and hyphens."
@@ -274,14 +326,16 @@ def register_browser_tools(
         height: int | None = None,
         session_id: str | None = None,
     ) -> list[Any]:
-        """Capture a visual screen snapshot of any webpage.
+        """对任意指定公开或授权的 URL 执行高品质视觉抓拍（截屏），可自适应渲染整页。
 
         Args:
-            url: The target page URL to capture.
-            width: Viewport width in pixels. Defaults to 1200.
-            height: Viewport height in pixels. If None, auto-scrolls to capture the full page.
-            session_id: Optional reusable session ID to execute the capture in
-                (for logged-in states).
+            url (str): 目标网页 URL 链接。
+            width (int): 浏览器视口宽度（像素），默认值为 1200。
+            height (int | None): 浏览器视口高度（像素）。若为 None，则自适应滚动捕获页面物理全高度。
+            session_id (str | None): 可选的复用已登录会话 ID。若未提供，将新建一个临时无头会话。
+
+        Returns:
+            list[Any]: 由说明文本和 base64 图像字节包装的 MCP 混合资产列表。
         """
         import base64
         from uuid import uuid4
@@ -291,6 +345,7 @@ def register_browser_tools(
         is_temp_session = False
         active_session_id = session_id
 
+        # 1. 无复用会话时，动态拉起一个临时隔离的无头沙箱
         if not active_session_id:
             session_info = await session_manager.create_session(headless=True)
             active_session_id = session_info.session_id
@@ -302,17 +357,19 @@ def register_browser_tools(
             initial_height = height if height is not None else 800
             await page.set_viewport_size({"width": width, "height": initial_height})
 
+            # 2. 页面重定向并强效等待基本 DOM 及样式载入就绪
             await page.goto(
                 url, wait_until="load", timeout=settings.browser_search.browser.timeout_ms
             )
             try:
+                # 尽力加载，如果网络空闲检测超时则可以安全忽略（因大部分异步 tracking 并不影响视觉呈现）
                 await page.wait_for_load_state(
                     "networkidle", timeout=settings.browser_search.browser.timeout_ms
                 )
             except Exception:
-                # Networkidle timeout can be ignored if page is otherwise loaded
                 pass
 
+            # 3. 自适应整页高度捕获，消除冗长尾白
             if height is None:
                 content_height = await page.evaluate("() => document.documentElement.scrollHeight")
                 viewport_height = max(content_height, 1)
@@ -324,9 +381,11 @@ def register_browser_tools(
                 actual_height = height
 
         finally:
+            # 4. 无论何种状况，必须销毁临时拉起的浏览器页签句柄
             if is_temp_session:
                 await session_manager.close_session(active_session_id)
 
+        # 5. 后台安全异步写盘备份截图
         output_dir = settings.render_output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
         resolved_path = output_dir / f"screenshot_{uuid4().hex[:8]}.png"

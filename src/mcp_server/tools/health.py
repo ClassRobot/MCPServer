@@ -1,4 +1,4 @@
-"""Small verification tools for client connectivity and request flow."""
+"""用于客户端连接及基础链路诊断的健康检查工具定义。"""
 
 from __future__ import annotations
 
@@ -9,15 +9,22 @@ from mcp_server.tool_logging import log_mcp_tool
 
 
 def ping() -> str:
-    """Return a simple 'pong' health-check response to verify the server is alive."""
+    """提供极简的心跳检查返回串以验证 MCP 服务端是否处于存活状态。
+
+    Returns:
+        str: 固定的 "pong" 响应。
+    """
     return "pong"
 
 
 def echo(message: str) -> str:
-    """Verify end-to-end request flow by returning the exact message sent by the client.
+    """提供端到端的链路回路诊断，返回客户端原样发送的输入信息。
 
     Args:
-        message: Any string to be echoed back.
+        message (str): 待回显输出的原始文本。
+
+    Returns:
+        str: 原样回显的文本信息。
     """
     return message
 
@@ -27,7 +34,12 @@ def register_health_tools(
     *,
     logging_settings: LoggingSettings,
 ) -> None:
-    """Register basic connectivity and diagnostic tools."""
+    """注册最基础的在线探针与端到端链路回显调试工具。
+
+    Args:
+        mcp (FastMCP): FastMCP 服务应用程序实例。
+        logging_settings (LoggingSettings): 全局日志记录审计配置。
+    """
     mcp.tool(
         name="ping",
         description="A minimal heartbeat tool to check if the MCP server is responsive.",

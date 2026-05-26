@@ -1,4 +1,8 @@
-"""Configuration models and loaders for the MCP server scaffold."""
+"""MCP 服务端的全局配置数据模型与加载逻辑。
+
+支持从本地 YAML 文件（例如 browser_search.yaml、logging.yaml）以及
+对应的环境变量中读取各项参数，并进行合并和严格校验。
+"""
 
 from __future__ import annotations
 
@@ -9,10 +13,14 @@ from typing import Literal
 
 import yaml
 
+# 支持的传输通道类型
 TransportName = Literal["stdio", "sse", "streamable-http"]
-ProviderName = Literal["bing"]
+# 支持的浏览器搜索引擎名称
+ProviderName = Literal["bing", "baidu"]
+# 允许的合法日志级别集合
 VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
+# 默认全局常量配置
 DEFAULT_SERVER_NAME = "MCP Server"
 DEFAULT_SERVER_INSTRUCTIONS = (
     "A starter MCP server scaffold. Extend this server with project-specific "
@@ -31,7 +39,18 @@ DEFAULT_SESSIONS_DIR = DEFAULT_RUNTIME_ROOT / "sessions"
 
 @dataclass(frozen=True, slots=True)
 class BrowserSettings:
-    """Browser runtime settings shared by low-level tools and high-level search."""
+    """浏览器自动化运行时配置。
+
+    用于控制底层无头浏览器（Playwright）启动与页面检索的具体参数。
+
+    Attributes:
+        headless (bool): 是否以无头模式运行浏览器。默认为 True。
+        timeout_ms (int): 页面加载及操作的全局超时时间（毫秒）。默认为 15,000。
+        session_ttl_sec (int): 浏览器会话在空闲时的存活周期（秒）。默认为 600。
+        default_provider (ProviderName): 默认的网络搜索引擎服务商，支持 "bing" 或 "baidu"。
+        max_results (int): 每次搜索返回的最大自然结果数量。默认为 5。
+        user_agent (str | None): 模拟浏览器的 User-Agent 字符串。
+    """
 
     headless: bool = True
     timeout_ms: int = 15_000
@@ -43,7 +62,16 @@ class BrowserSettings:
 
 @dataclass(frozen=True, slots=True)
 class SearchCacheSettings:
-    """Cache settings for structured browser search results."""
+    """结构化网络搜索结果缓存配置。
+
+    用于保存和读取之前执行过的网络搜索结果，以减少重复网络请求并优化性能。
+
+    Attributes:
+        enabled (bool): 是否启用本地磁盘搜索缓存。默认为 True。
+        ttl_sec (int): 缓存数据的过期周期（秒）。默认为 1800。
+        base_dir (Path): 缓存数据的存放目录路径。
+        max_entries (int): 本地缓存最大记录数，超过时会采用 LRU 进行剪枝。
+    """
 
     enabled: bool = True
     ttl_sec: int = 1_800
@@ -53,7 +81,12 @@ class SearchCacheSettings:
 
 @dataclass(frozen=True, slots=True)
 class SearchFilterSettings:
-    """Filtering settings for search results extracted from providers."""
+    """搜索结果的过滤清洗策略配置。
+
+    Attributes:
+        ads_enabled (bool): 是否允许包含广告推荐。若为 False 则过滤掉带有广告标记的链接。
+        strict_natural_results_only (bool): 是否只收集自然的页面索引信息，忽略相关推荐框。
+    """
 
     ads_enabled: bool = True
     strict_natural_results_only: bool = False
@@ -61,7 +94,7 @@ class SearchFilterSettings:
 
 @dataclass(frozen=True, slots=True)
 class BrowserSearchSettings:
-    """Aggregate settings for browser-driven search features."""
+    """浏览器搜索所有相关配置的聚合容器。"""
 
     browser: BrowserSettings = field(default_factory=BrowserSettings)
     cache: SearchCacheSettings = field(default_factory=SearchCacheSettings)
@@ -70,7 +103,18 @@ class BrowserSearchSettings:
 
 @dataclass(frozen=True, slots=True)
 class LoggingSettings:
-    """Settings for terminal and file-based structured logging."""
+    """终端和本地文件日志记录策略配置。
+
+    Attributes:
+        level (str): 日志等级，必须在 VALID_LOG_LEVELS 中。
+        console_enabled (bool): 是否向标准控制台（终端）输出日志。
+        console_color_enabled (bool): 终端日志是否使用高亮颜色标识级别。
+        file_enabled (bool): 是否记录日志到物理文件。
+        file_path (Path): 日志文件在服务器上的绝对物理路径。
+        retention_days (int): 日志保留天数，超过则进行轮转清理。
+        tool_args_enabled (bool): 是否将 MCP Tool 调用时的详细参数包写入日志。
+        max_field_length (int): 输出大字段日志时的截断长度限制。
+    """
 
     level: str = "INFO"
     console_enabled: bool = True
@@ -84,7 +128,15 @@ class LoggingSettings:
 
 @dataclass(frozen=True, slots=True)
 class DatabaseSettings:
-    """Settings for the persistence layer (optional SQL history)."""
+    """可选的数据库持久化历史层配置。
+
+    Attributes:
+        enabled (bool): 是否启用持久化层。
+        sqlalchemy_url (str | None): 异步 SQLAlchemy 连接数据库串。
+        echo (bool): 是否开启 SQLAlchemy 底层 SQL 执行打印。
+        pool_size (int): 数据库链接池大小。
+        max_overflow (int): 链接池最大允许溢出量。
+    """
 
     enabled: bool = False
     sqlalchemy_url: str | None = None
@@ -93,7 +145,7 @@ class DatabaseSettings:
     max_overflow: int = 10
 
     def __post_init__(self) -> None:
-        """Ensure the database URL uses an async driver if provided."""
+        """配置初始化后的后钩子函数，用于自动将连接串归一化为异步驱动。"""
         if self.sqlalchemy_url:
             normalized = _normalize_sqlalchemy_url(self.sqlalchemy_url)
             if normalized != self.sqlalchemy_url:
@@ -102,7 +154,16 @@ class DatabaseSettings:
 
 @dataclass(frozen=True, slots=True)
 class ServerSettings:
-    """Stable server settings shared by the CLI and application factory."""
+    """MCP 服务端核心配置与系统运行时目录集合。
+
+    Attributes:
+        name (str): MCP 服务器名称。
+        instructions (str): 暴露给 AI 客户端的服务器功能描述与操作规范。
+        host (str): 基于 HTTP 流通道协议的 IP 绑定地址。
+        port (int): 基于 HTTP 流通道协议的监听端口。
+        mount_path (str): 服务的挂载基础根路径。
+        streamable_http_path (str): 流式 JSON-RPC 传输通道端点。
+    """
 
     name: str = DEFAULT_SERVER_NAME
     instructions: str = DEFAULT_SERVER_INSTRUCTIONS
