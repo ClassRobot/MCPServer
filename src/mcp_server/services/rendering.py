@@ -22,7 +22,8 @@ from mcp_server.schemas.rendering import RenderImageResult
 class ContentRenderingService:
     """内容高保真排版渲染服务类。
 
-    协同有状态浏览器会话管理器，提供将 HTML/Markdown 原文转为高清 PNG、以及将特定指标数据绘制为精美 ECharts 统计图表的核心功能。
+    协同有状态浏览器会话管理器，提供将 HTML/Markdown 转为高清 PNG，
+    以及将特定指标数据绘制为 ECharts 统计图表的核心功能。
     """
 
     #: 默认全局渲染超时熔断时限（单位：秒）
@@ -64,7 +65,8 @@ class ContentRenderingService:
             theme (Literal["light", "dark"]): 排版主题，支持 "light" 或 "dark"。默认值为 "light"。
             width (int): 渲染画布的视口宽度（像素），默认值为 800。
             height (int | None): 渲染画布的视口高度（像素）。若为 None，则自适应内容实际物理高度。
-            output_path (str | None): 生成图像的保存路径。若未提供，则在默认输出目录下生成随机文件名。
+            output_path (str | None): 生成图像的保存路径。
+                若未提供，则在默认输出目录下生成随机文件名。
 
         Returns:
             RenderImageResult: 包含文件路径、Base64 字符串、实际渲染尺寸等信息的结构化结果。
@@ -129,11 +131,12 @@ class ContentRenderingService:
         height: int = 600,
         output_path: str | None = None,
     ) -> RenderImageResult:
-        """调用现代且功能强大的 Apache ECharts 图表引擎，将业务指标渲染为具有数字科技视觉美感的高保真图像。
+        """调用 Apache ECharts 图表引擎，将业务指标渲染为高保真图像。
 
         Args:
             chart_type (Literal["line", "bar", "pie", "radar", "scatter"]): 目标图表种类。
-            data (dict[str, Any]): 图表渲染数据集。支持传入完全自定义的 "option" 参数字典，或包含 "labels" 及 "datasets" 的规整结构。
+            data (dict[str, Any]): 图表渲染数据集。支持完全自定义的
+                "option" 参数字典，或包含 "labels" 及 "datasets" 的规整结构。
             title (str | None): 可选的图表标题。
             theme (Literal["light", "dark"]): 主题风格，支持 "light" 或 "dark"。默认值为 "light"。
             width (int): 生成图表的宽度（像素），默认值为 800。

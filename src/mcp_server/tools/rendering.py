@@ -1,4 +1,7 @@
-"""基于 Playwright 无头浏览器及 Apache ECharts 数据可视化引擎执行高保真排版图像渲染的 MCP 工具接口层。"""
+"""内容与图表高保真图像渲染的 MCP 工具接口层。
+
+基于 Playwright 无头浏览器及 Apache ECharts 数据可视化引擎执行渲染。
+"""
 
 from __future__ import annotations
 
@@ -22,7 +25,7 @@ def register_rendering_tools(
 
     Args:
         mcp (FastMCP): FastMCP 服务应用程序实例。
-        rendering_service (ContentRenderingService): Markdown/HTML 栅格化排版渲染及 ECharts 图表生成服务。
+        rendering_service (ContentRenderingService): Markdown/HTML 栅格化渲染服务。
         logging_settings (LoggingSettings): 全局日志记录审计配置。
     """
 
@@ -48,7 +51,8 @@ def register_rendering_tools(
         Args:
             content (str): HTML 或 Markdown 原始文本串。
             input_format (Literal["html", "markdown"]): 输入文本的物理格式。
-            theme (Literal["light", "dark"]): 视觉风格主题，支持 'light' 或 'dark'。默认值为 'light'。
+            theme (Literal["light", "dark"]): 视觉风格主题。
+                支持 'light' 或 'dark'，默认值为 'light'。
             width (int): 渲染视口像素宽度，默认值为 800。
             height (int | None): 渲染视口像素高度。若为 None 则自适应内容实际物理高度。
             output_path (str | None): 可选的实体 PNG 文件保存路径。
@@ -105,7 +109,8 @@ def register_rendering_tools(
 
         Args:
             chart_type (Literal["line", "bar", "pie", "radar", "scatter"]): 目标图表种类。
-            data (dict[str, Any]): 包含 labels 及 datasets 的结构化数据或完全自定义的 option 选项字典。
+            data (dict[str, Any]): 包含 labels/datasets 的结构化数据，
+                或完全自定义的 option 选项字典。
             title (str | None): 图表的顶部主标题。
             theme (Literal["light", "dark"]): 主题美学风格，支持 'light' 或 'dark'。
             width (int): 生成图像宽度，默认值为 800。

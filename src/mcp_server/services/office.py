@@ -140,11 +140,13 @@ class OfficeDocumentService:
     ) -> list[tuple[bytes, Path]]:
         """将 Office 文档转换为临时 PDF，随后将指定的页面栅格化渲染为 PNG 高清图像。
 
-        本方法封装了端到端转换：先转为中间 PDF 介质，提取特定页面渲染，并在最后无论成功与否都自动清理临时 PDF。
+        本方法封装端到端转换：先转为中间 PDF 介质，再提取特定页面渲染，
+        最后无论成功与否都自动清理临时 PDF。
 
         Args:
             doc_path (Path): Word/PPT 等源办公文档的本地路径。
-            pages (list[int] | None): 待渲染的基于 1 开始索引的页码/幻灯片列表。若为 None 则默认渲染全部页面。
+            pages (list[int] | None): 待渲染的 1-based 页码/幻灯片列表。
+                若为 None 则默认渲染全部页面。
             dpi (int): 目标图像的渲染分辨率精度 (DPI)，默认值为 150。
 
         Returns:

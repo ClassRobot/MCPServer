@@ -40,10 +40,11 @@ class SearchResultFilter:
         Args:
             raw_results (list[RawSearchResult]): 底层搜索引擎爬取到的原始结果候选列表。
             filter_ads (bool): 是否在该次请求中强制开启广告拦截。
-            strict_natural_results_only (bool | None): 是否仅保留完全自然排名的搜索项。若为 None，则自适应配置文件的全局默认设置。
+            strict_natural_results_only (bool | None): 是否仅保留完全自然排名的搜索项。
+                若为 None，则自适应配置文件的全局默认设置。
 
         Returns:
-            tuple[list[SearchResult], int]: 由 (已完成清洗重排名的搜索结果列表, 被拦截过滤掉的垃圾条目总计数) 构成的二元组。
+            tuple[list[SearchResult], int]: 由清洗重排名结果列表与过滤总数组成。
         """
         strict_mode = (
             self._settings.strict_natural_results_only
@@ -57,22 +58,22 @@ class SearchResultFilter:
         for raw_result in raw_results:
             # 1. 净化并对齐 URL 格式，为精确去重奠定基础
             normalized_url = self._normalize_url(raw_result.url)
-            
+
             # 2. 如果开启广告拦截且当前条目被标记为广告，则予以剔除
             if filter_ads and self._settings.ads_enabled and raw_result.is_ad:
                 filtered_count += 1
                 continue
-                
+
             # 3. 严格模式拦截：若只保留自然搜索项而当前属于推荐/推广等非自然内容，则予以剔除
             if strict_mode and not raw_result.is_natural:
                 filtered_count += 1
                 continue
-                
+
             # 4. 空数据完整性检验：防止爬取到空标题或空链接引发前端渲染空白卡片
             if not raw_result.title.strip() or not normalized_url:
                 filtered_count += 1
                 continue
-                
+
             # 5. 精确去重检查：规避不同搜索引擎抓取结果集在不同源站或在合并时出现冗余
             if normalized_url in seen_urls:
                 filtered_count += 1
@@ -108,7 +109,8 @@ class SearchResultFilter:
         if not parsed.netloc:
             return ""
 
-        # 剥离诸如 utm_source、utm_medium、gclid 等用于广告点击归因追踪的冗余 query 参数，保证相同的实际页面拥有确定性的 URL 签名
+        # 剥离 utm_source、utm_medium、gclid 等广告归因参数，
+        # 保证相同实际页面拥有确定性的 URL 签名。
         cleaned_query = urlencode(
             [
                 (key, value)
@@ -125,4 +127,3 @@ class SearchResultFilter:
             fragment="",
         )
         return urlunparse(normalized)
-

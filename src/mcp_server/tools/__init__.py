@@ -26,7 +26,7 @@ def register_tools(
     settings: ServerSettings,
     browser_search_service: BrowserSearchService,
     session_manager: BrowserSessionManager,
-    query_history_service: QueryHistoryService,
+    query_history_service: QueryHistoryService | None,
     rendering_service: ContentRenderingService,
     pdf_service: PDFReadingService,
     office_service: OfficeDocumentService,
@@ -38,17 +38,18 @@ def register_tools(
         settings (ServerSettings): 服务端全局核心配置对象。
         browser_search_service (BrowserSearchService): 网页多引擎高级搜索调度服务。
         session_manager (BrowserSessionManager): 有状态浏览器会话生命周期管理器。
-        query_history_service (QueryHistoryService): 检索查询历史记录持久化服务。
-        rendering_service (ContentRenderingService): Markdown/HTML 栅格化排版渲染及 ECharts 图表生成服务。
+        query_history_service (QueryHistoryService | None): 检索查询历史记录持久化服务。
+        rendering_service (ContentRenderingService): Markdown/HTML 栅格化排版渲染服务。
         pdf_service (PDFReadingService): PDF 文档高保真提取及渲染服务。
         office_service (OfficeDocumentService): Word/PPT 办公文档转换及渲染服务。
     """
     register_health_tools(mcp, logging_settings=settings.logging)
-    register_database_tools(
-        mcp,
-        query_history_service=query_history_service,
-        logging_settings=settings.logging,
-    )
+    if query_history_service is not None:
+        register_database_tools(
+            mcp,
+            query_history_service=query_history_service,
+            logging_settings=settings.logging,
+        )
     register_browser_tools(
         mcp,
         settings=settings,

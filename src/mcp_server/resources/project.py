@@ -14,26 +14,27 @@ def project_info() -> str:
         str: 骨架结构与工具/资源/提示词扩展目录规范的只读文本。
     """
     return (
-        "This is a Python MCP server scaffold managed by uv. "
-        "Put MCP tools under src/mcp_server/tools, resources under "
-        "src/mcp_server/resources, prompts under src/mcp_server/prompts, "
-        "and move shared business logic into dedicated service modules as the "
-        "project grows."
+        "This is a Python MCP server scaffold. Put MCP tools under "
+        "src/mcp_server/tools, resources under src/mcp_server/resources, "
+        "prompts under src/mcp_server/prompts, and shared business logic "
+        "under src/mcp_server/services as the project grows."
     )
 
 
 def register_project_resources(
     mcp: FastMCP,
     *,
-    query_history_service: QueryHistoryService,
+    query_history_service: QueryHistoryService | None,
 ) -> None:
     """在 FastMCP 实例上注册项目元信息及近期的动态查询历史记录资源路由。
 
     Args:
         mcp (FastMCP): 待注册资源路由的 FastMCP 应用实例。
-        query_history_service (QueryHistoryService): 检索查询历史的持久化业务服务。
+        query_history_service (QueryHistoryService | None): 检索查询历史的持久化业务服务。
     """
     mcp.resource("project://info")(project_info)
+    if query_history_service is None:
+        return
 
     @mcp.resource("history://recent")
     async def recent_history() -> str:

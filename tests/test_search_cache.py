@@ -66,6 +66,59 @@ def test_cache_store_discards_expired_entries(tmp_path) -> None:
     assert not cache_file.exists()
 
 
+def test_cache_store_discards_malformed_structured_entries(tmp_path) -> None:
+    cache_store = SearchCacheStore(
+        SearchCacheSettings(enabled=True, ttl_sec=1800, base_dir=tmp_path, max_entries=10)
+    )
+
+    malformed_payloads = {
+        "missing-expires": {"response": {}},
+        "invalid-expires": {"expires_at": "not-a-date", "response": {}},
+        "missing-response": {"expires_at": (datetime.now(UTC) + timedelta(seconds=60)).isoformat()},
+    }
+
+    for cache_key, payload in malformed_payloads.items():
+        cache_file = tmp_path / f"{cache_key}.json"
+        cache_file.write_text(json.dumps(payload), encoding="utf-8")
+
+        cached_response = cache_store.get(cache_key)
+
+        assert cached_response is None
+        assert not cache_file.exists()
+
+
+def test_cache_store_discards_wrong_typed_structured_entries(tmp_path) -> None:
+    cache_store = SearchCacheStore(
+        SearchCacheSettings(enabled=True, ttl_sec=1800, base_dir=tmp_path, max_entries=10)
+    )
+    cache_key = "wrong-types"
+    cache_file = tmp_path / f"{cache_key}.json"
+    payload = {
+        "expires_at": (datetime.now(UTC) + timedelta(seconds=60)).isoformat(),
+        "response": {
+            "query": "openai",
+            "provider": "bing",
+            "summary": None,
+            "filtered_count": True,
+            "results": [
+                {
+                    "rank": True,
+                    "title": "OpenAI",
+                    "url": "https://openai.com/",
+                    "snippet": None,
+                    "source": "openai.com",
+                }
+            ],
+        },
+    }
+    cache_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    cached_response = cache_store.get(cache_key)
+
+    assert cached_response is None
+    assert not cache_file.exists()
+
+
 def test_cache_store_prunes_exceeding_max_entries(tmp_path) -> None:
     cache_store = SearchCacheStore(
         SearchCacheSettings(enabled=True, ttl_sec=1800, base_dir=tmp_path, max_entries=2)

@@ -110,7 +110,8 @@ def register_browser_tools(
 
         Args:
             headless (bool | None): 是否以无头模式启动浏览器环境。若为 None 则使用默认设置。
-            state_name (str | None): 可选的之前成功备份到磁盘的会话状态名（读取 Cookie 与 LocalStorage）。
+            state_name (str | None): 可选的已备份会话状态名。
+                用于读取 Cookie 与 LocalStorage。
 
         Returns:
             dict[str, Any]: 包含新建会话 session_id 及运行参数的元数据字典。
@@ -197,7 +198,8 @@ def register_browser_tools(
         Args:
             session_id (str): 有效的浏览器会话标识 ID。
             selector (str): CSS 选择符表达式。
-            wait_for_network_idle (bool): 点击动作完成后，是否安全等待页面网络载入空闲。默认值为 True。
+            wait_for_network_idle (bool): 点击完成后，是否等待页面网络载入空闲。
+                默认值为 True。
 
         Returns:
             dict[str, Any]: 点击操作成功与否字典。
@@ -362,7 +364,7 @@ def register_browser_tools(
                 url, wait_until="load", timeout=settings.browser_search.browser.timeout_ms
             )
             try:
-                # 尽力加载，如果网络空闲检测超时则可以安全忽略（因大部分异步 tracking 并不影响视觉呈现）
+                # 网络空闲检测超时可安全忽略，多数异步 tracking 不影响视觉呈现。
                 await page.wait_for_load_state(
                     "networkidle", timeout=settings.browser_search.browser.timeout_ms
                 )

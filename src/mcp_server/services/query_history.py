@@ -22,7 +22,8 @@ class QueryHistoryService:
         """初始化查询历史记录服务。
 
         Args:
-            database_manager (DatabaseManager): 用于分配并管理 SQLAlchemy 异步 Session 的数据库管理器。
+            database_manager (DatabaseManager): 用于分配并管理 SQLAlchemy
+                异步 Session 的数据库管理器。
         """
         self._database_manager = database_manager
 
@@ -67,8 +68,6 @@ class QueryHistoryService:
                 source_tool=normalized_source_tool,
                 notes=normalized_notes or None,
             )
-            # 显式提交事务，把脏数据刷入物理磁盘
-            await session.commit()
             return self._to_schema(record)
 
     async def list_recent_queries(self, *, limit: int = 10) -> list[QueryRecord]:

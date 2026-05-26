@@ -409,14 +409,15 @@ def _load_logging_settings(
 
 def _load_database_settings() -> DatabaseSettings:
     """Load database settings exclusively from environment variables."""
-    enabled = _read_bool_setting("MCP_DATABASE_ENABLED", None, False)
+    enabled_env = os.getenv("MCP_DATABASE_ENABLED")
+    enabled = _parse_bool("MCP_DATABASE_ENABLED", enabled_env) if enabled_env is not None else False
     raw_url = os.getenv("MCP_DATABASE_URL") or os.getenv("DATABASE_URL")
 
     if enabled and not raw_url:
         raise ValueError("MCP_DATABASE_ENABLED is true but no DATABASE_URL is set.")
 
     sqlalchemy_url = None
-    if raw_url:
+    if raw_url and (enabled_env is None or enabled):
         enabled = True  # Auto-enable if URL is provided
         sqlalchemy_url = _normalize_sqlalchemy_url(raw_url)
 

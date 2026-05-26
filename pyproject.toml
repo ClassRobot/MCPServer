@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mcp-server"
 version = "0.1.0"
-description = "A Python MCP server scaffold managed with uv."
+description = "A Python MCP server scaffold."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

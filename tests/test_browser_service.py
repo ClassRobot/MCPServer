@@ -106,3 +106,51 @@ async def test_browser_search_service_force_refresh_bypasses_cache(tmp_path) -> 
     await service.search(query="openai", force_refresh=True)
 
     assert provider.calls == 2
+
+
+@pytest.mark.asyncio
+async def test_browser_search_service_rejects_non_positive_max_results(tmp_path) -> None:
+    session_manager = FakeSessionManager()
+    provider = FakeProvider()
+    cache_settings = SearchCacheSettings(
+        enabled=True, ttl_sec=1800, base_dir=tmp_path, max_entries=10
+    )
+    service = BrowserSearchService(
+        session_manager=session_manager,
+        cache_store=SearchCacheStore(cache_settings),
+        providers={"bing": provider},
+        result_filter=SearchResultFilter(SearchFilterSettings()),
+        browser_settings=BrowserSettings(),
+        cache_settings=cache_settings,
+    )
+
+    with pytest.raises(ValueError, match="max_results must be a positive integer"):
+        await service.search(query="openai", max_results=0)
+
+    with pytest.raises(ValueError, match="max_results must be a positive integer"):
+        await service.search(query="openai", max_results=-1)
+
+    assert provider.calls == 0
+    assert session_manager.created_sessions == []
+
+
+@pytest.mark.asyncio
+async def test_browser_search_service_uses_default_when_max_results_is_none(tmp_path) -> None:
+    session_manager = FakeSessionManager()
+    provider = FakeProvider()
+    cache_settings = SearchCacheSettings(
+        enabled=False, ttl_sec=1800, base_dir=tmp_path, max_entries=10
+    )
+    service = BrowserSearchService(
+        session_manager=session_manager,
+        cache_store=SearchCacheStore(cache_settings),
+        providers={"bing": provider},
+        result_filter=SearchResultFilter(SearchFilterSettings()),
+        browser_settings=BrowserSettings(max_results=1),
+        cache_settings=cache_settings,
+    )
+
+    response = await service.search(query="openai", max_results=None)
+
+    assert len(response.results) == 1
+    assert response.results[0].title == "OpenAI"

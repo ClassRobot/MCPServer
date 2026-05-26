@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from mcp_server.config import SearchCacheSettings
 from mcp_server.schemas import BrowserSearchResponse, SearchResult
+
+RESPONSE_STRING_FIELDS = {"query", "provider"}
+RESULT_STRING_FIELDS = {"title", "url", "source"}
 
 
 class SearchCacheStore:
@@ -84,30 +87,35 @@ class SearchCacheStore:
             cache_file.unlink(missing_ok=True)
             return None
 
-        # 校验内部写入的硬时间戳 expires_at 是否已过期
-        expires_at = datetime.fromisoformat(payload["expires_at"])
-        if expires_at <= datetime.now(UTC):
+        try:
+            # 校验内部写入的硬时间戳 expires_at 是否已过期
+            expires_at = datetime.fromisoformat(payload["expires_at"])
+            if expires_at <= datetime.now(UTC):
+                cache_file.unlink(missing_ok=True)
+                return None
+
+            response_payload = payload["response"]
+            self._validate_response_payload(response_payload)
+            return BrowserSearchResponse(
+                query=response_payload["query"],
+                provider=response_payload["provider"],
+                summary=response_payload["summary"],
+                cache_hit=True,
+                filtered_count=response_payload["filtered_count"],
+                results=[
+                    SearchResult(
+                        rank=result["rank"],
+                        title=result["title"],
+                        url=result["url"],
+                        snippet=result["snippet"],
+                        source=result["source"],
+                    )
+                    for result in response_payload["results"]
+                ],
+            )
+        except (KeyError, TypeError, ValueError):
             cache_file.unlink(missing_ok=True)
             return None
-
-        response_payload = payload["response"]
-        return BrowserSearchResponse(
-            query=response_payload["query"],
-            provider=response_payload["provider"],
-            summary=response_payload["summary"],
-            cache_hit=True,
-            filtered_count=response_payload["filtered_count"],
-            results=[
-                SearchResult(
-                    rank=result["rank"],
-                    title=result["title"],
-                    url=result["url"],
-                    snippet=result["snippet"],
-                    source=result["source"],
-                )
-                for result in response_payload["results"]
-            ],
-        )
 
     def set(self, cache_key: str, response: BrowserSearchResponse) -> None:
         """将新的结构化搜索结果写入本地物理磁盘并执行剪枝动作。
@@ -130,7 +138,7 @@ class SearchCacheStore:
         }
         with cache_file.open("w", encoding="utf-8") as cache_handle:
             json.dump(payload, cache_handle, ensure_ascii=False, indent=2)
-            
+
         # 写入后立即触发剪枝清理算法，保证缓存容量是有界的
         self.prune()
 
@@ -182,3 +190,41 @@ class SearchCacheStore:
     def _cache_file(self, cache_key: str) -> Path:
         """计算得出具体 Key 对应的本地物理 JSON 文件路径。"""
         return self._settings.base_dir / f"{cache_key}.json"
+
+    def _validate_response_payload(self, response_payload: object) -> None:
+        """验证缓存响应体结构，避免把坏类型重新注入运行时。"""
+        if not isinstance(response_payload, dict):
+            raise TypeError("Cached response payload must be a mapping.")
+
+        for field_name in RESPONSE_STRING_FIELDS:
+            if not isinstance(response_payload[field_name], str):
+                raise TypeError(f"Cached response field {field_name!r} must be a string.")
+
+        if response_payload["summary"] is not None and not isinstance(
+            response_payload["summary"], str
+        ):
+            raise TypeError("Cached response summary must be a string or null.")
+        if not _is_plain_int(response_payload["filtered_count"]):
+            raise TypeError("Cached response filtered_count must be an integer.")
+        if not isinstance(response_payload["results"], list):
+            raise TypeError("Cached response results must be a list.")
+
+        for result_payload in response_payload["results"]:
+            self._validate_result_payload(result_payload)
+
+    def _validate_result_payload(self, result_payload: object) -> None:
+        """验证单条缓存搜索结果结构。"""
+        if not isinstance(result_payload, dict):
+            raise TypeError("Cached result payload must be a mapping.")
+        if not _is_plain_int(result_payload["rank"]):
+            raise TypeError("Cached result rank must be an integer.")
+        for field_name in RESULT_STRING_FIELDS:
+            if not isinstance(result_payload[field_name], str):
+                raise TypeError(f"Cached result field {field_name!r} must be a string.")
+        if result_payload["snippet"] is not None and not isinstance(result_payload["snippet"], str):
+            raise TypeError("Cached result snippet must be a string or null.")
+
+
+def _is_plain_int(value: object) -> bool:
+    """返回值是否为真正的 int，排除 Python 中 bool 继承 int 的特殊情况。"""
+    return isinstance(value, int) and not isinstance(value, bool)

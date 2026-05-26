@@ -34,7 +34,9 @@ class BrowserSearchService:
     编排并整合搜索引擎调用、广告拦截器校验、LRU缓存管理及结果序列化排序。
     """
 
-    def __init__(self, *,
+    def __init__(
+        self,
+        *,
         session_manager: BrowserSessionManager,
         cache_store: SearchCacheStore,
         providers: dict[str, BrowserSearchProvider],
@@ -59,7 +61,9 @@ class BrowserSearchService:
         self._browser_settings = browser_settings
         self._cache_settings = cache_settings
 
-    async def search(self, *,
+    async def search(
+        self,
+        *,
         query: str,
         provider: str = "bing",
         max_results: int | None = None,
@@ -89,7 +93,7 @@ class BrowserSearchService:
         if provider_impl is None:
             raise RuntimeError(f"Unsupported search provider: {resolved_provider!r}.")
 
-        limit = max_results or self._browser_settings.max_results
+        limit = self._browser_settings.max_results if max_results is None else max_results
         if limit <= 0:
             raise ValueError("max_results must be a positive integer.")
 
@@ -138,9 +142,9 @@ class BrowserSearchService:
 
         # 6. 后台执行文件持久化
         if use_cache and self._cache_settings.enabled:
-            # 写入物理磁盘是同步阻塞 I/O，使用 to_thread 托管至底层线程池执行，防挂起 asyncio 主事件循环
+            # 文件缓存写入是同步 I/O，放在线程池中避免阻塞事件循环。
             await asyncio.to_thread(self._cache_store.set, cache_key, response)
-            
+
         return response
 
     def _normalize_query(self, query: str) -> str:

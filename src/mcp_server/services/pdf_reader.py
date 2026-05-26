@@ -66,7 +66,8 @@ class PDFReadingService:
             pdf_path (Path): PDF 文档的本地绝对路径。
             page_index (int): 待渲染页面的基于 0 开始的物理索引。
             dpi (int): 渲染的目标分辨率精度 (DPI)，默认值为 150。
-            output_path (str | None): 生成的 PNG 图像的保存路径。若未提供，则在默认输出目录下生成随机文件名。
+            output_path (str | None): 生成的 PNG 图像的保存路径。
+                若未提供，则在默认输出目录下生成随机文件名。
 
         Returns:
             tuple[bytes, str]: 由 (PNG图像原始字节流, PNG文件的绝对路径字符串) 构成的二元组。
@@ -103,7 +104,8 @@ class PDFReadingService:
                 )
 
             page = doc[page_index]
-            # pypdfium2 的缩放系数是以标准的 72 DPI 为底数计算的（例：scale = 2.0 代表以 144 DPI 渲染）
+            # pypdfium2 的缩放系数以标准 72 DPI 为底数计算。
+            # 例如 scale = 2.0 代表以 144 DPI 渲染。
             scale = dpi / 72.0
             pil_image = page.render(scale=scale).to_pil()
 

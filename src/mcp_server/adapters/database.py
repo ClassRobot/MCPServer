@@ -23,7 +23,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 from mcp_server.config import DatabaseSettings
 
-# 数据库索引与约束的标准命名规约，确保在不同 DBMS 之间迁移时命名的一致性，防止 Alembic 迁移工具发生名称冲突。
+# 数据库索引与约束的标准命名规约，确保跨 DBMS 迁移时命名一致，
+# 防止 Alembic 迁移工具发生名称冲突。
 NAMING_CONVENTION = {
     "ix": "ix_%(table_name)s_%(column_0_name)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -61,7 +62,8 @@ class DatabaseManager:
         if settings.enabled and settings.sqlalchemy_url is not None:
             engine_kwargs: dict[str, Any] = {
                 "echo": settings.echo,
-                "pool_pre_ping": True,  # 每次获取链接时预先发送 PING，自动重连失效链接，防止 MySQL/Postgres 抛出断开连接异常
+                # 取连接前预先发送 PING，避免 MySQL/Postgres 复用失效连接。
+                "pool_pre_ping": True,
             }
             # SQLite 数据库使用 aiosqlite，不需要也不支持配置 pool_size 和 max_overflow
             if not settings.sqlalchemy_url.startswith("sqlite+aiosqlite://"):
@@ -71,7 +73,8 @@ class DatabaseManager:
             self._engine = create_async_engine(settings.sqlalchemy_url, **engine_kwargs)
             self._session_factory = async_sessionmaker(
                 self._engine,
-                expire_on_commit=False,  # 提交时不令 ORM 对象失效，防止事务外读取发生 DetachedInstanceError 异常
+                # 提交时不令 ORM 对象失效，避免事务外读取发生 DetachedInstanceError。
+                expire_on_commit=False,
             )
 
     @property

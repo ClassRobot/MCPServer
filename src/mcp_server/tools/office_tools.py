@@ -47,7 +47,8 @@ def register_office_tools(
 
         Args:
             docx_path (str): Word 文档在磁盘上的路径，相对路径会基于项目根目录自动折算。
-            pages (list[int] | None): 待渲染的基于 1 开始索引的页码列表；若为 None 则默认渲染全部页面。
+            pages (list[int] | None): 待渲染的 1-based 页码列表。
+                若为 None 则默认渲染全部页面。
             dpi (int): 渲染的目标分辨率精度 (DPI)，默认值为 150。
 
         Returns:
@@ -117,7 +118,8 @@ def register_office_tools(
 
         Args:
             pptx_path (str): PPTX 文件的物理路径，相对路径自动折算。
-            slides (list[int] | None): 待渲染的基于 1 开始索引的幻灯片页码列表；若为 None 则默认渲染全部。
+            slides (list[int] | None): 待渲染的 1-based 幻灯片页码列表。
+                若为 None 则默认渲染全部。
             dpi (int): 渲染的目标分辨率精度 (DPI)，默认值为 150。
 
         Returns:

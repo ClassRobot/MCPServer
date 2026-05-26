@@ -18,15 +18,16 @@
 ## 开发规范
 
 ### 环境与依赖
-- **开发环境**: 推荐使用 `uv` 自动管理的 `.venv` 虚拟环境，或任意 Python 3.11+ 运行环境。
-- **包管理器**: 项目完全使用 `uv` 管理依赖与环境，保证依赖版本与 `uv.lock` 严格一致。
+- **开发环境**: 本机开发默认使用 Conda 环境 `classbot-mcp`。
+- **依赖来源**: 项目依赖版本由 `pyproject.toml` 与 `uv.lock` 记录；不要在项目根目录新建 `.venv`。
+- **执行约定**: 先激活 `classbot-mcp`，再在该环境中运行测试、lint 与服务命令。
 - **常用命令**:
   ```bash
-  uv sync                             # 初始化并同步依赖
-  uv run playwright install chromium   # 安装浏览器核心
-  uv run ruff check .                 # 代码静态检查与 Lint
-  uv run ruff format .                # 代码格式化
-  uv run pytest                       # 运行单元测试
+  conda activate classbot-mcp
+  python -m playwright install chromium
+  python -m ruff check .
+  python -m ruff format .
+  python -m pytest
   ```
 
 ### 测试约定

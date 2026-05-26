@@ -1,24 +1,24 @@
 # MCP Server
 
-基于 Python 与 `uv` 构建的 MCP Server 项目骨架，默认集成了官方 `FastMCP` SDK，开箱即用。
+基于 Python 构建的 MCP Server 项目骨架，默认集成了官方 `FastMCP` SDK，开箱即用。
 
 ## 快速开始
 
 ### 1. 本地启动 (Stdio 模式)
 适用于 Claude Desktop、Cherry Studio 等客户端本地接入：
 ```bash
-uv sync
-uv run playwright install chromium
-uv run mcp-server
+conda activate classbot-mcp
+python -m playwright install chromium
+mcp-server
 ```
 
 ### 2. 本地启动 (流式 HTTP 模式)
 ```bash
 # 默认流式 HTTP 启动
-uv run mcp-server --transport streamable-http
+mcp-server --transport streamable-http
 
 # 指定监听地址与端口
-uv run mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
+mcp-server --transport streamable-http --host 0.0.0.0 --port 8000
 ```
 
 ### 3. Docker 部署 (流式 HTTP 模式)
@@ -71,10 +71,10 @@ docker compose -f docker-compose.dev.yml up --build
 
 ## 常用开发命令
 ```bash
-uv sync         # 初始化并同步虚拟环境依赖
-uv run pytest   # 运行测试套件
-uv run ruff check  # 代码风格与 Lint 检查
-uv run ruff format # 代码格式化
+conda activate classbot-mcp
+python -m pytest
+python -m ruff check .
+python -m ruff format .
 ```
 
 ## 核心环境变量

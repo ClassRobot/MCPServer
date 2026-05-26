@@ -34,7 +34,8 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
     设置服务的异步生命周期管理（lifespan），并注册所有的 MCP 协议能力。
 
     Args:
-        settings (ServerSettings | None): 全局服务器配置对象。若为 None 则默认从本地 YAML 或环境变量中加载。
+        settings (ServerSettings | None): 全局服务器配置对象。
+            若为 None 则默认从本地 YAML 或环境变量中加载。
 
     Returns:
         FastMCP: 配置齐全且已装配完毕的 FastMCP 实例。
@@ -63,7 +64,9 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         session_manager=session_manager,
         default_output_dir=active_settings.render_output_dir,
     )
-    query_history_service = QueryHistoryService(database_manager)
+    query_history_service = (
+        QueryHistoryService(database_manager) if database_manager.enabled else None
+    )
     pdf_service = PDFReadingService(default_output_dir=active_settings.render_output_dir)
     office_service = OfficeDocumentService(
         default_output_dir=active_settings.render_output_dir,
@@ -106,15 +109,15 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         pdf_service=pdf_service,
         office_service=office_service,
     )
-    
+
     # 6. 注册所有的 MCP 协议静态与动态资源（提供严格网络资源模式文件读取）
     register_resources(
         mcp,
         query_history_service=query_history_service,
         render_output_dir=active_settings.render_output_dir,
     )
-    
+
     # 7. 注册 AI 交互提示词模板（Prompts）
     register_prompts(mcp)
-    
+
     return mcp

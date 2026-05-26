@@ -76,7 +76,7 @@ flowchart LR
 | 变量 | 作用 | 默认 |
 | :--- | :--- | :--- |
 | `DATABASE_URL` / `MCP_DATABASE_URL` | 主数据库连接串 | 无 |
-| `MCP_DATABASE_ENABLED` | 显式启停数据库 | URL 存在时自动启用 |
+| `MCP_DATABASE_ENABLED` | 显式启停数据库；设为 `false` 时优先关闭 | URL 存在时自动启用 |
 | `MCP_DATABASE_ECHO` | SQLAlchemy SQL 输出 | `false` |
 | `MCP_DATABASE_POOL_SIZE` | 连接池大小 | `5` |
 | `MCP_DATABASE_MAX_OVERFLOW` | 连接池溢出连接数 | `10` |
@@ -85,9 +85,9 @@ flowchart LR
 
 ```bash
 set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mcp_server
-uv sync
-uv run alembic upgrade head
-uv run mcp-server --transport streamable-http
+conda activate classbot-mcp
+python -m alembic upgrade head
+mcp-server --transport streamable-http
 ```
 
 代码运行时会自动把 PostgreSQL URL 规范化为 `postgresql+asyncpg://...`。  
@@ -97,9 +97,9 @@ uv run mcp-server --transport streamable-http
 
 ### 本地开发
 
-- 推荐使用 `uv` 自动管理的虚拟环境或任意 Python 3.11+ 运行环境。
-- 依赖同步通过 `uv sync` 完成，确保依赖版本与 `uv.lock` 保持严格一致。
-- 数据库服务建议单独跑 PostgreSQL 容器或本机实例，不要把业务运行时和宿主机 Conda 环境混在一起理解。
+- 本机开发默认使用 Conda 环境 `classbot-mcp`。
+- 项目依赖版本由 `pyproject.toml` 与 `uv.lock` 记录，不在项目根目录新建 `.venv`。
+- 数据库服务建议单独跑 PostgreSQL 容器或本机实例，应用进程运行在 `classbot-mcp` 中。
 
 ### 生产部署
 

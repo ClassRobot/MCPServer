@@ -254,7 +254,8 @@ def _summarize_value(name: str, value: Any, max_length: int) -> Any:
     1. 字段名包含敏感片段（如 Token、Password、Authorization 等），直接红牌脱敏为 `<redacted>`。
     2. 数值或布尔等标量，保留原值输出。
     3. 超长字符串正文，调用首端自动截断（保留前缀，追加省略号）。
-    4. 对二进制大字节数组（bytes）、大字典（dict）和大列表进行长度及大小摘要输出，避免巨大的 Base64 数据洪流压垮日志磁盘。
+    4. 对大 bytes、dict、list 进行长度和大小摘要输出，
+       避免巨大的 Base64 数据洪流压垮日志磁盘。
     """
     if _is_sensitive_name(name):
         return "<redacted>"

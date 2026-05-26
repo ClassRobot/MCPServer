@@ -6,10 +6,11 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, func, inspect, select
 
 from alembic import command
 from mcp_server.adapters.database import Base, DatabaseManager
+from mcp_server.adapters.database_models import QueryRecordModel
 from mcp_server.config import DatabaseSettings, load_server_settings
 from mcp_server.services.query_history import QueryHistoryService
 
@@ -42,6 +43,18 @@ def test_load_server_settings_rejects_enabled_database_without_url(
 
     with pytest.raises(ValueError, match="MCP_DATABASE_ENABLED is true"):
         load_server_settings()
+
+
+def test_load_server_settings_respects_explicit_database_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///disabled.sqlite3")
+    monkeypatch.setenv("MCP_DATABASE_ENABLED", "false")
+
+    settings = load_server_settings()
+
+    assert settings.database.enabled is False
+    assert settings.database.sqlalchemy_url is None
 
 
 @pytest.mark.asyncio
@@ -91,6 +104,37 @@ async def test_database_manager_session_requires_configuration() -> None:
     with pytest.raises(RuntimeError, match="Database is not configured"):
         async with manager.session():
             pytest.fail("session() should not yield when the database is disabled.")
+
+
+@pytest.mark.asyncio
+async def test_database_manager_session_rolls_back_on_error(tmp_path: Path) -> None:
+    database_path = tmp_path / "rollback.sqlite3"
+    manager = DatabaseManager(
+        DatabaseSettings(enabled=True, sqlalchemy_url=f"sqlite:///{database_path}")
+    )
+
+    try:
+        async with manager.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+        with pytest.raises(RuntimeError, match="abort write"):
+            async with manager.session() as session:
+                session.add(
+                    QueryRecordModel(
+                        query="will rollback",
+                        provider="manual",
+                        source_tool="test",
+                    )
+                )
+                await session.flush()
+                raise RuntimeError("abort write")
+
+        async with manager.session() as session:
+            count = await session.scalar(select(func.count()).select_from(QueryRecordModel))
+
+        assert count == 0
+    finally:
+        await manager.dispose()
 
 
 def test_alembic_upgrade_creates_initial_tables(
