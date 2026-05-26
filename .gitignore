@@ -1,53 +1,271 @@
-# Python bytecode and caches
+# ==========================================
+# Python Patterns
+# ==========================================
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyd
 *.pyo
+*.so
 
-# Build artifacts and packaging
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
 build/
+develop-eggs/
 dist/
-site/
+downloads/
+eggs/
 .eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
 *.egg-info/
-pip-wheel-metadata/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-.conda/
+# PyInstaller
+#  Usually these files are written by a python script, and contain the bin hex data.
+#  If you want to backup the build folder, you can comment this line.
+*.manifest
+*.spec
 
-# Test, lint, and coverage caches
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.hypothesis/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
 .tox/
 .nox/
 .coverage
 .coverage.*
+.cache
+nosetests.xml
 coverage.xml
-htmlcov/
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytestdebuglog.txt
 
-# Local environment files
-.env
-.env.*
-*.local
+# Translations
+*.mo
+*.pot
 
-# Logs and runtime artifacts
+# Django stuff:
 *.log
-*.pid
-*.seed
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the Python version is exposed in the package.
+#   For a bot or app, this is typically fine.
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   with no cross-platform support, pipenv may install dependencies that don't work, or even
+#   fail to install all dependencies. In that case, add Pipfile.lock to .gitignore.
+# Pipfile.lock
+
+# poetry
+#   Similar to Pipenv, see https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+# poetry.lock
+
+# pdm
+#   Similar to Pipenv, see https://pdm.fming.dev/#commit-your-pdmlock-file-to-version-control
+# pdm.lock
+
+# PEP 582; used by e.g. github.com/fannheyward/coc-pyright
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+.secrets
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ==========================================
+# Node.js / Frontend Patterns
+# ==========================================
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Next.js build output
+.next/
+out/
+
+# Nuxt.js build output
+.nuxt/
+dist/
+
+# Gatsby files
+.cache/
+# Comment the next line if you want to checkin your web py site
+public/
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# Tern JS port file
+.tern-port
+
+# Stores VS Code versions used for testing VS Code extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Vite cache
+.vite/
+
+# SvelteKit
+.svelte-kit/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# Project Specific & Runtime
+# ==========================================
 runtime/
 playwright-report/
 test-results/
+.secrets
 
-# Editor and IDE files
+# ==========================================
+# OS & IDE Patterns
+# ==========================================
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# IDEs
 .idea/
 .vscode/
-
-# OS files
-.DS_Store
-Thumbs.db
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
