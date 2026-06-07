@@ -5,6 +5,7 @@
 """
 
 from .browser_search import BrowserSearchService
+from .markitdown import MarkItDownConversionService
 from .pdf_reader import PDFReadingService
 from .query_history import QueryHistoryService
 from .rendering import ContentRenderingService
@@ -12,6 +13,7 @@ from .search_results import SearchResultFilter
 
 __all__ = [
     "BrowserSearchService",
+    "MarkItDownConversionService",
     "QueryHistoryService",
     "SearchResultFilter",
     "ContentRenderingService",

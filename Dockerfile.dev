@@ -15,11 +15,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MCP_PROJECT_ROOT=/workspace \
     MCP_BROWSER_CONFIG_PATH=/workspace/config/browser_search.yaml \
     MCP_BROWSER_CACHE_BASE_DIR=/data/cache/browser-search \
+    MCP_MARKITDOWN_CONFIG_PATH=/workspace/config/markitdown.yaml \
+    MCP_MARKITDOWN_ALLOWED_ROOTS=/workspace:/data \
+    MCP_MARKITDOWN_OUTPUT_DIR=/data/markitdown \
     MCP_LOG_FILE_PATH=/data/logs/mcp-server.log
 
 WORKDIR /workspace
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
 
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --all-groups --no-install-project
@@ -30,7 +33,7 @@ RUN uv sync --frozen --all-groups \
     && uv run --no-sync playwright install --with-deps chromium \
     && groupadd --system appgroup \
     && useradd --system --gid appgroup --create-home --home-dir /home/appuser appuser \
-    && mkdir -p /data/cache/browser-search /data/logs /ms-playwright /opt/venv \
+    && mkdir -p /data/cache/browser-search /data/logs /data/markitdown /ms-playwright /opt/venv \
     && chown -R appuser:appgroup /workspace /data /ms-playwright /opt/venv
 
 USER appuser

@@ -23,6 +23,15 @@
 - 按天滚动与保留天数
 - MCP 工具参数摘要开关
 
+### `markitdown.yaml`
+
+Microsoft MarkItDown 文档转 Markdown 能力的运行配置，包括：
+
+- 源文件读取白名单目录
+- Markdown 输出目录
+- 单文件最大字节数
+- 默认是否保存转换结果
+
 ## 优先级
 
 配置优先级从高到低为：

@@ -28,3 +28,10 @@
   - **零 Poppler 二进制依赖**: 摒弃传统的 `poppler`/`pdf2image` 二进制方案，改用纯 Python 的 Google PDFium 极速绑定包 **`pypdfium2`**（自带各平台预编译二进制，体积轻量且绝对跨平台稳定）和 **`pypdf`**。
   - **非阻塞式多线程解耦**: 将 CPU 密集型的 PDFium 光栅化像素点阵渲染和文本字节解析操作全部委派给 Python 的非阻塞式线程池 (`asyncio.to_thread`) 执行，确保了高并发请求下 MCP 服务异步主循环的顺畅运转。
   - **高保真光栅化**: 提供了可调节的 DPI 分辨率缩放渲染，输出的 PNG 字节码与 Base64 编码数据完美融合。
+
+### 4. 通用 Markdown 转换服务 (`markitdown.py` / `MarkItDownConversionService`)
+- **职责**: 对接 Microsoft MarkItDown 官方 Python 库，将白名单目录内的本地文件转换成 Markdown。
+- **安全边界**:
+  - 只接受本地路径或 `file://` URI，不接受远程 HTTP/HTTPS URI。
+  - 源文件必须位于 `config/markitdown.yaml` 配置的 `allowed_roots` 内。
+  - 输出 Markdown 统一写入 `runtime/markitdown`，并通过 `markitdown://...` MCP Resource 读取。

@@ -19,6 +19,7 @@ from .config import ServerSettings, load_server_settings
 from .prompts import register_prompts
 from .resources import register_resources
 from .services.browser_search import BrowserSearchService
+from .services.markitdown import MarkItDownConversionService
 from .services.office import OfficeDocumentService
 from .services.pdf_reader import PDFReadingService
 from .services.query_history import QueryHistoryService
@@ -64,6 +65,10 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         session_manager=session_manager,
         default_output_dir=active_settings.render_output_dir,
     )
+    markitdown_service = MarkItDownConversionService(
+        settings=active_settings.markitdown,
+        project_root=active_settings.project_root,
+    )
     query_history_service = (
         QueryHistoryService(database_manager) if database_manager.enabled else None
     )
@@ -106,6 +111,7 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         session_manager=session_manager,
         query_history_service=query_history_service,
         rendering_service=rendering_service,
+        markitdown_service=markitdown_service,
         pdf_service=pdf_service,
         office_service=office_service,
     )
@@ -115,6 +121,7 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         mcp,
         query_history_service=query_history_service,
         render_output_dir=active_settings.render_output_dir,
+        markitdown_output_dir=active_settings.markitdown.output_dir,
     )
 
     # 7. 注册 AI 交互提示词模板（Prompts）

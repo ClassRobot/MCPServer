@@ -46,6 +46,7 @@ def test_create_server_hides_database_capabilities_when_database_is_disabled() -
 
     assert "database_record_query" not in tool_names
     assert "database_list_query_history" not in tool_names
+    assert "convert_to_markdown" in tool_names
     assert "history://recent" not in resource_uris
     assert "project://info" in resource_uris
 

@@ -23,6 +23,9 @@ services:
       MCP_PROJECT_ROOT: /workspace
       MCP_BROWSER_CONFIG_PATH: /workspace/config/browser_search.yaml
       MCP_BROWSER_CACHE_BASE_DIR: /data/cache/browser-search
+      MCP_MARKITDOWN_CONFIG_PATH: /workspace/config/markitdown.yaml
+      MCP_MARKITDOWN_ALLOWED_ROOTS: /workspace:/data
+      MCP_MARKITDOWN_OUTPUT_DIR: /data/markitdown
       MCP_LOG_FILE_PATH: /data/logs/mcp-server.log
       WATCHFILES_FORCE_POLLING: "true"
     ports:

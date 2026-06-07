@@ -16,6 +16,7 @@ from .browser import (
     SearchResult,
 )
 from .database import PersistedConfigItem, QueryRecord, TaskExecutionRecord
+from .markitdown import MarkItDownConversionResult
 from .rendering import RenderImageResult
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "PersistedConfigItem",
     "QueryRecord",
     "RawSearchResult",
+    "MarkItDownConversionResult",
     "SearchResult",
     "TaskExecutionRecord",
     "RenderImageResult",

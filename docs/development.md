@@ -42,6 +42,11 @@
 - 常用调试变量：`MCP_LOG_LEVEL=DEBUG`、`MCP_LOG_CONSOLE_COLOR=false`、`MCP_LOG_TOOL_ARGS=true`。
 - Tool 参数日志默认关闭；开启后也只记录安全摘要，敏感字段会脱敏，长文本会截断。
 
+### 第三方转换器接入
+- MarkItDown 这类第三方转换器应作为 service 层能力接入，不直接裸跑独立 MCP server。
+- Tool 层只暴露受控接口和结构化返回，不能把任意 URI/I/O 权限直接交给客户端。
+- 本地输出统一写入配置化 runtime 目录，并通过 MCP Resource URI 返回。
+
 ### 变更原则
 1. **就近与下沉**: 仅单一模块使用的帮助函数保持就近；业务变复杂或多模块共享时，再下沉至 `services/` 或 `adapters/`。
 2. **单一职责**: Tool/Resource 仅处理参数边界和输入输出，复杂编排下沉。

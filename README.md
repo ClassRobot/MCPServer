@@ -42,7 +42,7 @@ docker compose -f docker-compose.dev.yml up --build
 
 ## 🎁 高阶扩展能力 (Advanced High-Value Extensions)
 
-本项目全新扩展并深度整合了 4 大核心高阶工具能力，完全面向大厂生产规范：
+本项目全新扩展并深度整合了多项核心高阶工具能力，完全面向大厂生产规范：
 
 1. **网页视觉快照 (`browser_screenshot_url`)**
    - 驱动 Headless 浏览器对任意 URL 截取高清长图或特定尺寸快照，支持在已登录会话中执行，为大模型注入第一手“网页视觉感知”。
@@ -58,6 +58,11 @@ docker compose -f docker-compose.dev.yml up --build
 5. **Office 办公文档图像渲染器 (`browser_render_docx` / `browser_render_pptx`)**
    - 通过极轻量且高度兼容的无头 **LibreOffice** 命令行进程，实现 Word（.docx）与 PowerPoint（.pptx）文档的秒级高清光栅化渲染。
    - **智能定位器**：自适应搜寻系统 PATH、Windows 注册表、标准 Program Files 路径以及 **Windows Scoop 默认沙盒路径**，实现零配置开箱即用。
+
+6. **Microsoft MarkItDown Markdown 转换器 (`convert_to_markdown`)**
+   - 内嵌 Microsoft 官方 `markitdown` Python 库，将白名单目录内的本地文档转换为 Markdown。
+   - 默认只接受本地路径或 `file://` URI，不接收远程 HTTP/HTTPS URI。
+   - 转换结果可写入统一运行时目录，并通过 `markitdown://{filename}` MCP Resource 读取。
 
 ---
 
@@ -82,10 +87,11 @@ python -m ruff format .
 - **服务元数据**: `MCP_SERVER_NAME`, `MCP_SERVER_INSTRUCTIONS`
 - **HTTP 监听**: `MCP_SERVER_HOST`, `MCP_SERVER_PORT`, `MCP_SERVER_MOUNT_PATH`, `MCP_SERVER_STREAMABLE_HTTP_PATH`
 - **日志调试**: `MCP_LOG_LEVEL`, `MCP_LOG_CONSOLE_COLOR`, `MCP_LOG_FILE_PATH`, `MCP_LOG_TOOL_ARGS`
+- **MarkItDown**: `MCP_MARKITDOWN_ENABLED`, `MCP_MARKITDOWN_ALLOWED_ROOTS`, `MCP_MARKITDOWN_OUTPUT_DIR`, `MCP_MARKITDOWN_MAX_INPUT_BYTES`
 
 ## 项目结构与组织约定
 - **[docs/](docs/)**: 存放项目长期维护的设计、架构及环境文档（如 [development.md](docs/development.md)、[docker.md](docs/docker.md)、[docker-development.md](docs/docker-development.md)）。
-- **[config/](config/)**: 存放项目级 YAML 配置文件（如 `browser_search.yaml`）。
+- **[config/](config/)**: 存放项目级 YAML 配置文件（如 `browser_search.yaml`, `markitdown.yaml`）。
 - **[src/mcp_server/](src/mcp_server/)**: 核心 Python 源码包。
   - `tools/`, `resources/`, `prompts/`: 注册具体 MCP 能力的分层模块。
   - `services/`, `adapters/`, `schemas/`: 应对复杂业务的业务层、外部对接层及数据模型定义层。

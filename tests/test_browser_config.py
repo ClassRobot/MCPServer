@@ -75,3 +75,54 @@ def test_invalid_browser_timeout_is_rejected(
 
     with pytest.raises(ValueError, match="MCP_BROWSER_TIMEOUT_MS must be a positive integer"):
         load_server_settings()
+
+
+def test_load_server_settings_reads_markitdown_yaml(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    allowed_root = tmp_path / "documents"
+    allowed_root.mkdir()
+    (config_dir / "markitdown.yaml").write_text(
+        "\n".join(
+            [
+                "enabled: true",
+                "storage:",
+                "  output_dir: runtime/md",
+                "  save_output_by_default: false",
+                "security:",
+                "  allowed_roots:",
+                "    - documents",
+                "  max_input_bytes: 1024",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MCP_PROJECT_ROOT", str(tmp_path))
+
+    settings = load_server_settings()
+
+    assert settings.markitdown.enabled is True
+    assert settings.markitdown.output_dir == (tmp_path / "runtime" / "md").resolve()
+    assert settings.markitdown.save_output_by_default is False
+    assert settings.markitdown.allowed_roots == (allowed_root.resolve(),)
+    assert settings.markitdown.max_input_bytes == 1024
+
+
+def test_environment_overrides_markitdown_yaml(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    (config_dir / "markitdown.yaml").write_text("enabled: false\n", encoding="utf-8")
+    monkeypatch.setenv("MCP_PROJECT_ROOT", str(tmp_path))
+    monkeypatch.setenv("MCP_MARKITDOWN_ENABLED", "true")
+    monkeypatch.setenv("MCP_MARKITDOWN_OUTPUT_DIR", "runtime/from-env")
+
+    settings = load_server_settings()
+
+    assert settings.markitdown.enabled is True
+    assert settings.markitdown.output_dir == (tmp_path / "runtime" / "from-env").resolve()

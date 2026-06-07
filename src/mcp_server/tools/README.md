@@ -101,3 +101,17 @@
 - **主要参数**:
   - `pdf_path` (str): 本地绝对路径或项目相对路径。
   - `pages` (list[int], 可选): 1-indexed 的页码列表。不传则默认读取全量页面文本。
+
+---
+
+### 6. Microsoft MarkItDown 文档转 Markdown
+
+#### `convert_to_markdown`
+调用 Microsoft 官方 `markitdown` Python 库，将受控本地文件转换为 Markdown。
+- **主要参数**:
+  - `uri` (str): 项目相对路径、本地绝对路径或 `file://` URI。
+  - `save_output` (bool, 可选): 是否将 Markdown 保存到统一 runtime 目录。
+- **安全边界**:
+  - 默认拒绝 HTTP/HTTPS 等远程 URI。
+  - 源文件必须位于 `config/markitdown.yaml` 的 `security.allowed_roots` 内。
+  - 保存后的 Markdown 通过 `markitdown://{filename}` Resource 读取，不暴露物理路径。

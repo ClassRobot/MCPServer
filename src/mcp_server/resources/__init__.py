@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from mcp_server.services.query_history import QueryHistoryService
 
+from .markitdown import register_markitdown_resources
 from .project import register_project_resources
 from .render import register_render_resources
 
@@ -17,6 +18,7 @@ def register_resources(
     *,
     query_history_service: QueryHistoryService | None,
     render_output_dir: Path,
+    markitdown_output_dir: Path,
 ) -> None:
     """向给定的 FastMCP 实例注册本项目暴露的所有静态资源路由。
 
@@ -27,3 +29,4 @@ def register_resources(
     """
     register_project_resources(mcp, query_history_service=query_history_service)
     register_render_resources(mcp, render_output_dir=render_output_dir)
+    register_markitdown_resources(mcp, output_dir=markitdown_output_dir)

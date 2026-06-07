@@ -1,0 +1,11 @@
+enabled: true
+
+storage:
+  output_dir: runtime/markitdown
+  save_output_by_default: true
+
+security:
+  allowed_roots:
+    - .
+  max_input_bytes: 26214400
+

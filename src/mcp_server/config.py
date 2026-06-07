@@ -29,12 +29,14 @@ DEFAULT_SERVER_INSTRUCTIONS = (
 DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BROWSER_CONFIG_PATH = DEFAULT_PROJECT_ROOT / "config" / "browser_search.yaml"
 DEFAULT_LOGGING_CONFIG_PATH = DEFAULT_PROJECT_ROOT / "config" / "logging.yaml"
+DEFAULT_MARKITDOWN_CONFIG_PATH = DEFAULT_PROJECT_ROOT / "config" / "markitdown.yaml"
 
 DEFAULT_RUNTIME_ROOT = DEFAULT_PROJECT_ROOT / "runtime"
 DEFAULT_CACHE_BASE_DIR = DEFAULT_RUNTIME_ROOT / "cache" / "browser-search"
 DEFAULT_RENDER_OUTPUT_DIR = DEFAULT_RUNTIME_ROOT / "render"
 DEFAULT_LOG_PATH = DEFAULT_RUNTIME_ROOT / "logs" / "mcp-server.log"
 DEFAULT_SESSIONS_DIR = DEFAULT_RUNTIME_ROOT / "sessions"
+DEFAULT_MARKITDOWN_OUTPUT_DIR = DEFAULT_RUNTIME_ROOT / "markitdown"
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +129,25 @@ class LoggingSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class MarkItDownSettings:
+    """Microsoft MarkItDown 文档转 Markdown 能力的安全边界配置。
+
+    Attributes:
+        enabled (bool): 是否启用 MarkItDown 工具注册。
+        allowed_roots (tuple[Path, ...]): 允许读取源文件的根目录白名单。
+        output_dir (Path): 转换后的 Markdown 文件统一输出目录。
+        max_input_bytes (int): 单个源文件最大允许字节数。
+        save_output_by_default (bool): 默认是否将 Markdown 结果写入 runtime。
+    """
+
+    enabled: bool = True
+    allowed_roots: tuple[Path, ...] = (DEFAULT_PROJECT_ROOT,)
+    output_dir: Path = DEFAULT_MARKITDOWN_OUTPUT_DIR
+    max_input_bytes: int = 25 * 1024 * 1024
+    save_output_by_default: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class DatabaseSettings:
     """可选的数据库持久化历史层配置。
 
@@ -176,10 +197,12 @@ class ServerSettings:
     project_root: Path = DEFAULT_PROJECT_ROOT
     browser_search_config_path: Path = DEFAULT_BROWSER_CONFIG_PATH
     logging_config_path: Path = DEFAULT_LOGGING_CONFIG_PATH
+    markitdown_config_path: Path = DEFAULT_MARKITDOWN_CONFIG_PATH
     render_output_dir: Path = DEFAULT_RENDER_OUTPUT_DIR
     sessions_dir: Path = DEFAULT_SESSIONS_DIR
     browser_search: BrowserSearchSettings = field(default_factory=BrowserSearchSettings)
     logging: LoggingSettings = field(default_factory=LoggingSettings)
+    markitdown: MarkItDownSettings = field(default_factory=MarkItDownSettings)
     database: DatabaseSettings = field(default_factory=DatabaseSettings)
 
 
@@ -197,6 +220,11 @@ def load_server_settings() -> ServerSettings:
     )
     logging_config = _load_yaml_config(logging_config_path)
 
+    markitdown_config_path = _resolve_path_env(
+        "MCP_MARKITDOWN_CONFIG_PATH", project_root / "config" / "markitdown.yaml", project_root
+    )
+    markitdown_config = _load_yaml_config(markitdown_config_path)
+
     return ServerSettings(
         name=os.getenv("MCP_SERVER_NAME", DEFAULT_SERVER_NAME),
         instructions=os.getenv("MCP_SERVER_INSTRUCTIONS", DEFAULT_SERVER_INSTRUCTIONS),
@@ -207,12 +235,14 @@ def load_server_settings() -> ServerSettings:
         project_root=project_root,
         browser_search_config_path=browser_search_config_path,
         logging_config_path=logging_config_path,
+        markitdown_config_path=markitdown_config_path,
         render_output_dir=_resolve_path_env(
             "MCP_RENDER_OUTPUT_DIR", Path("runtime/render"), project_root
         ),
         sessions_dir=_resolve_path_env("MCP_SESSIONS_DIR", Path("runtime/sessions"), project_root),
         browser_search=_load_browser_search_settings(browser_search_config, project_root),
         logging=_load_logging_settings(logging_config, project_root),
+        markitdown=_load_markitdown_settings(markitdown_config, project_root),
         database=_load_database_settings(),
     )
 
@@ -407,6 +437,45 @@ def _load_logging_settings(
     )
 
 
+def _load_markitdown_settings(
+    config_data: dict[str, object],
+    project_root: Path,
+) -> MarkItDownSettings:
+    """Merge MarkItDown conversion settings from YAML and environment variables."""
+    storage_config = _read_mapping(config_data, "storage")
+    security_config = _read_mapping(config_data, "security")
+
+    return MarkItDownSettings(
+        enabled=_read_bool_setting(
+            env_name="MCP_MARKITDOWN_ENABLED",
+            config_value=config_data.get("enabled"),
+            default=True,
+        ),
+        allowed_roots=_read_path_list_setting(
+            env_name="MCP_MARKITDOWN_ALLOWED_ROOTS",
+            config_value=security_config.get("allowed_roots"),
+            default=(project_root,),
+            project_root=project_root,
+        ),
+        output_dir=_read_path_setting(
+            env_name="MCP_MARKITDOWN_OUTPUT_DIR",
+            config_value=storage_config.get("output_dir"),
+            default=project_root / "runtime" / "markitdown",
+            project_root=project_root,
+        ),
+        max_input_bytes=_read_positive_int_setting(
+            env_name="MCP_MARKITDOWN_MAX_INPUT_BYTES",
+            config_value=security_config.get("max_input_bytes"),
+            default=25 * 1024 * 1024,
+        ),
+        save_output_by_default=_read_bool_setting(
+            env_name="MCP_MARKITDOWN_SAVE_OUTPUT",
+            config_value=storage_config.get("save_output_by_default"),
+            default=True,
+        ),
+    )
+
+
 def _load_database_settings() -> DatabaseSettings:
     """Load database settings exclusively from environment variables."""
     enabled_env = os.getenv("MCP_DATABASE_ENABLED")
@@ -519,6 +588,33 @@ def _read_path_setting(
     if not isinstance(config_value, str):
         raise ValueError(f"{env_name} must be a path string when configured.")
     return _resolve_path(project_root, config_value)
+
+
+def _read_path_list_setting(
+    env_name: str,
+    config_value: object,
+    default: tuple[Path, ...],
+    project_root: Path,
+) -> tuple[Path, ...]:
+    """Read a list of filesystem paths from env vars or YAML config."""
+    env_value = os.getenv(env_name)
+    if env_value is not None:
+        raw_values = [value.strip() for value in env_value.split(os.pathsep) if value.strip()]
+        if not raw_values:
+            raise ValueError(f"{env_name} must contain at least one path.")
+        return tuple(_resolve_path(project_root, value) for value in raw_values)
+
+    if config_value is None:
+        return default
+    if not isinstance(config_value, list) or not config_value:
+        raise ValueError(f"{env_name} must be a non-empty list of path strings.")
+
+    resolved_paths: list[Path] = []
+    for raw_value in config_value:
+        if not isinstance(raw_value, str):
+            raise ValueError(f"{env_name} must contain only path strings.")
+        resolved_paths.append(_resolve_path(project_root, raw_value))
+    return tuple(resolved_paths)
 
 
 def _resolve_path(project_root: Path, configured_path: str) -> Path:
