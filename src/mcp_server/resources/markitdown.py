@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -28,4 +29,4 @@ def register_markitdown_resources(mcp: FastMCP, output_dir: Path) -> None:
             raise ValueError("Directory traversal attempt detected.")
         if not file_path.is_file():
             raise FileNotFoundError(f"MarkItDown output not found: {filename}")
-        return file_path.read_text(encoding="utf-8")
+        return await asyncio.to_thread(file_path.read_text, encoding="utf-8")

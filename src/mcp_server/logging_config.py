@@ -23,6 +23,30 @@ _UVICORN_LOGGER_NAMES = ("uvicorn", "uvicorn.error", "uvicorn.access", "uvicorn.
 # 项目专属库级别前缀
 _LIBRARY_LOGGER_PREFIXES = ("mcp",)
 
+# 单日志文件最大字节限制（50 MB）：防止错误风暴导致单文件无限膨胀
+_MAX_LOG_FILE_BYTES = 50 * 1024 * 1024
+
+
+class _SizedTimedRotatingFileHandler(TimedRotatingFileHandler):
+    """TimedRotatingFileHandler with an additional per-file size cap.
+
+    Rotates on the normal daily schedule AND forces an immediate rotation whenever
+    the active log file exceeds ``max_bytes``, preventing runaway growth during
+    error storms where thousands of records arrive before midnight.
+    """
+
+    def __init__(self, *args: Any, max_bytes: int = _MAX_LOG_FILE_BYTES, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.max_bytes = max_bytes
+
+    def shouldRollover(self, record: logging.LogRecord) -> bool:  # type: ignore[override]
+        """Return True if the active file has reached max_bytes, or on the normal schedule."""
+        if self.max_bytes > 0 and self.stream:
+            self.stream.seek(0, 2)  # Seek to end to get current size
+            if self.stream.tell() >= self.max_bytes:
+                return True
+        return super().shouldRollover(record)
+
 # ANSI 控制台颜色转义字符常量定义
 _RESET = "\033[0m"
 _DIM = "\033[2m"
@@ -146,8 +170,8 @@ def configure_logging(settings: LoggingSettings) -> None:
     if settings.file_enabled:
         settings.file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # 每日午夜触发日志轮转，自动加上日期后缀归档，并清理过期的旧日志文件
-        file_handler = TimedRotatingFileHandler(
+        # 每日午夜触发日志轮转，同时加入单文件 50 MB 大小上限防止错误风暴导致文件无限膨胀
+        file_handler = _SizedTimedRotatingFileHandler(
             filename=settings.file_path,
             when="midnight",
             interval=1,

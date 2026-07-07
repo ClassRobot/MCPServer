@@ -17,6 +17,12 @@ import markdown
 
 from mcp_server.adapters.browser_session import BrowserSessionManager
 from mcp_server.schemas.rendering import RenderImageResult
+from mcp_server.utils.cleanup import prune_output_dir
+
+#: Default maximum number of render PNG files to keep in the output directory.
+_DEFAULT_PRUNE_MAX_ENTRIES = 200
+#: Default maximum age in seconds for render files (3 days).
+_DEFAULT_PRUNE_MAX_AGE_SEC = 3 * 24 * 3600
 
 
 class ContentRenderingService:
@@ -34,6 +40,8 @@ class ContentRenderingService:
         session_manager: BrowserSessionManager,
         default_output_dir: Path,
         render_timeout_sec: int = DEFAULT_RENDER_TIMEOUT_SEC,
+        prune_max_entries: int = _DEFAULT_PRUNE_MAX_ENTRIES,
+        prune_max_age_sec: float = _DEFAULT_PRUNE_MAX_AGE_SEC,
     ) -> None:
         """初始化内容高保真排版渲染服务。
 
@@ -41,10 +49,14 @@ class ContentRenderingService:
             session_manager (BrowserSessionManager): Playwright 浏览器有状态会话管理器。
             default_output_dir (Path): 默认生成的 PNG 渲染图像保存的目标目录。
             render_timeout_sec (int): 渲染时限阈值（秒），默认值为 60。
+            prune_max_entries (int): 输出目录保留的最大文件数（LRU 淘汰）。
+            prune_max_age_sec (float): 超过此秒数的文件将被无条件删除。
         """
         self._session_manager = session_manager
         self._default_output_dir = default_output_dir
         self._render_timeout_sec = render_timeout_sec
+        self._prune_max_entries = prune_max_entries
+        self._prune_max_age_sec = prune_max_age_sec
         # 递归初始化生成目标物理目录
         self._default_output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -110,6 +122,17 @@ class ContentRenderingService:
         # 4. 后台执行写盘操作，通过 to_thread 将文件 I/O 卸载，保证主线程响应极速
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(resolved_path.write_bytes, screenshot_bytes)
+
+        # 触发后台目录剪枝（fire-and-forget，不阻塞响应返回）
+        asyncio.create_task(
+            asyncio.to_thread(
+                prune_output_dir,
+                self._default_output_dir,
+                max_entries=self._prune_max_entries,
+                max_age_sec=self._prune_max_age_sec,
+                glob_pattern="*.png",
+            )
+        )
 
         # 5. 同时生成 Base64 编码，方便 MCP 通道直接回传富文本图片资产
         base64_data = base64.b64encode(screenshot_bytes).decode("utf-8")
@@ -404,6 +427,17 @@ class ContentRenderingService:
 
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(resolved_path.write_bytes, screenshot_bytes)
+
+        # 触发后台目录剪枝（fire-and-forget，不阻塞响应返回）
+        asyncio.create_task(
+            asyncio.to_thread(
+                prune_output_dir,
+                self._default_output_dir,
+                max_entries=self._prune_max_entries,
+                max_age_sec=self._prune_max_age_sec,
+                glob_pattern="*.png",
+            )
+        )
 
         base64_data = base64.b64encode(screenshot_bytes).decode("utf-8")
         return RenderImageResult(

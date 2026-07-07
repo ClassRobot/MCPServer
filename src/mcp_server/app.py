@@ -64,6 +64,8 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
     rendering_service = ContentRenderingService(
         session_manager=session_manager,
         default_output_dir=active_settings.render_output_dir,
+        prune_max_entries=active_settings.render_prune_max_entries,
+        prune_max_age_sec=active_settings.render_prune_max_age_sec,
     )
     markitdown_service = MarkItDownConversionService(
         settings=active_settings.markitdown,
@@ -72,7 +74,11 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
     query_history_service = (
         QueryHistoryService(database_manager) if database_manager.enabled else None
     )
-    pdf_service = PDFReadingService(default_output_dir=active_settings.render_output_dir)
+    pdf_service = PDFReadingService(
+        default_output_dir=active_settings.render_output_dir,
+        prune_max_entries=active_settings.render_prune_max_entries,
+        prune_max_age_sec=active_settings.render_prune_max_age_sec,
+    )
     office_service = OfficeDocumentService(
         default_output_dir=active_settings.render_output_dir,
         pdf_service=pdf_service,

@@ -7,6 +7,7 @@ Cookie 登录态存盘与加载，以及低阶的网页输入、点击、内容�
 from __future__ import annotations
 
 import asyncio
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -61,6 +62,10 @@ class BrowserSessionManager:
         self._playwright: Playwright | None = None
         self._sessions: dict[str, ManagedBrowserSession] = {}
         self._lock = asyncio.Lock()  # 协程异步锁，确保多线程/协程并发加载 Playwright 时是线程安全的
+        # Timestamp of the last cleanup pass; used to throttle cleanup frequency.
+        self._last_cleanup_ts: float = 0.0
+        #: Minimum interval between cleanup scans (seconds).
+        self._cleanup_interval_sec: float = 60.0
 
     async def create_session(
         self,
@@ -76,10 +81,17 @@ class BrowserSessionManager:
         Returns:
             BrowserSessionInfo: 新会话的描述元数据（session_id, headless）。
         """
-        # 1. 触发过期会话的清理回收
+        # 1. 触发过期会话的清理回收（带节流，实际清理很少发生）
         await self._cleanup_expired_sessions()
-        playwright = await self._ensure_playwright()
 
+        # 并发会话上限检查：防止短时间内大量请求启动无数 Chromium 进程耗尽内存
+        max_sessions = self._settings.max_concurrent_sessions
+        if len(self._sessions) >= max_sessions:
+            raise RuntimeError(
+                f"已达到最大并发浏览器会话上限（{max_sessions}），请等待现有会话释放后再试。"
+            )
+
+        playwright = await self._ensure_playwright()
         session_headless = self._settings.headless if headless is None else headless
 
         # 2. 启动 Chromium 物理子进程
@@ -326,20 +338,47 @@ class BrowserSessionManager:
             return self._playwright
 
     async def _cleanup_expired_sessions(self) -> None:
-        """协程独占锁下，定时扫表清除超过闲置存活期（TTL）的有状态浏览器会话。
+        """过期会话清理，带60秒节流防止过频调用，且锁外执行慢速 I/O。
 
-        【TTL 算法说明】：
-        - 获取当前 UTC 时间戳并倒推 `session_ttl_sec` 秒得到过期线时间（expiration_cutoff）。
-        - 筛查所有 `last_used_at` 早于过期线的活动会话，并将它们逐一执行进程级 close 销毁，
-          防止长时间闲置的无头浏览器进程发生句柄泄露、拖垮物理服务器内存。
+        【优化说明】：
+        1. **节流**：利用 monotonic 时钟记录上次清理时间，间隔 < 60 秒时直接返回，
+           避免 get_page() 的高频调用每次都获取锁并扫描会话表。
+        2. **锁内只做数据结构操作**：在持锁期间仅收集过期 ID 并从 _sessions 字典移除，
+           不执行任何耗时 I/O。锁释放后再执行 browser/context close()，
+           防止锁持有期间其他协程（create_session、get_page）被长时间阻塞。
         """
+        # 快速路径：节流检查（无锁），避免每次 get_page 都走锁
+        now_ts = time.monotonic()
+        if now_ts - self._last_cleanup_ts < self._cleanup_interval_sec:
+            return
+
+        # 锁内：更新时间戳、收集过期会话并从 dict 移除（纯内存操作，极快）
+        sessions_to_close: list[ManagedBrowserSession] = []
         async with self._lock:
+            # 二次检查，防止并发协程重复清理
+            if time.monotonic() - self._last_cleanup_ts < self._cleanup_interval_sec:
+                return
+            self._last_cleanup_ts = time.monotonic()
+
             session_ttl = self._settings.session_ttl_sec
             expiration_cutoff = datetime.now(UTC) - timedelta(seconds=session_ttl)
             expired_ids = [
-                session_id
-                for session_id, session in self._sessions.items()
+                sid
+                for sid, session in self._sessions.items()
                 if session.last_used_at < expiration_cutoff
             ]
-            for session_id in expired_ids:
-                await self.close_session(session_id)
+            for sid in expired_ids:
+                session = self._sessions.pop(sid, None)
+                if session is not None:
+                    sessions_to_close.append(session)
+
+        # 锁外：执行耗时的 browser/context close（避免持锁时阻塞其他协程）
+        for session in sessions_to_close:
+            try:
+                await session.context.close()
+            except Exception:
+                pass
+            try:
+                await session.browser.close()
+            except Exception:
+                pass

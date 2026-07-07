@@ -60,6 +60,9 @@ class BrowserSettings:
     default_provider: ProviderName = "bing"
     max_results: int = 5
     user_agent: str | None = None
+    #: Hard cap on concurrent active browser sessions. Requests beyond this limit
+    #: raise RuntimeError rather than spawning unlimited Chromium processes.
+    max_concurrent_sessions: int = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +141,8 @@ class MarkItDownSettings:
         output_dir (Path): 转换后的 Markdown 文件统一输出目录。
         max_input_bytes (int): 单个源文件最大允许字节数。
         save_output_by_default (bool): 默认是否将 Markdown 结果写入 runtime。
+        prune_max_entries (int): 输出目录最大保留文件数，超限时 LRU 淘汰旧文件。
+        prune_max_age_sec (float): 超过此秒数的输出文件将被无条件清除（默认 7 天）。
     """
 
     enabled: bool = True
@@ -145,6 +150,8 @@ class MarkItDownSettings:
     output_dir: Path = DEFAULT_MARKITDOWN_OUTPUT_DIR
     max_input_bytes: int = 25 * 1024 * 1024
     save_output_by_default: bool = True
+    prune_max_entries: int = 500
+    prune_max_age_sec: float = 7 * 24 * 3600  # 7 days
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,6 +206,10 @@ class ServerSettings:
     logging_config_path: Path = DEFAULT_LOGGING_CONFIG_PATH
     markitdown_config_path: Path = DEFAULT_MARKITDOWN_CONFIG_PATH
     render_output_dir: Path = DEFAULT_RENDER_OUTPUT_DIR
+    #: Maximum number of PNG files kept in render_output_dir (LRU eviction).
+    render_prune_max_entries: int = 200
+    #: Files older than this many seconds are removed from render_output_dir (default 3 days).
+    render_prune_max_age_sec: float = 3 * 24 * 3600
     sessions_dir: Path = DEFAULT_SESSIONS_DIR
     browser_search: BrowserSearchSettings = field(default_factory=BrowserSearchSettings)
     logging: LoggingSettings = field(default_factory=LoggingSettings)
@@ -340,6 +351,11 @@ def _load_browser_search_settings(
                 config_value=browser_config.get("user_agent"),
                 default=None,
             ),
+            max_concurrent_sessions=_read_positive_int_setting(
+                env_name="MCP_BROWSER_MAX_CONCURRENT_SESSIONS",
+                config_value=browser_config.get("max_concurrent_sessions"),
+                default=10,
+            ),
         ),
         cache=SearchCacheSettings(
             enabled=_read_bool_setting(
@@ -472,6 +488,16 @@ def _load_markitdown_settings(
             env_name="MCP_MARKITDOWN_SAVE_OUTPUT",
             config_value=storage_config.get("save_output_by_default"),
             default=True,
+        ),
+        prune_max_entries=_read_positive_int_setting(
+            env_name="MCP_MARKITDOWN_PRUNE_MAX_ENTRIES",
+            config_value=storage_config.get("prune_max_entries"),
+            default=500,
+        ),
+        prune_max_age_sec=_read_positive_int_setting(
+            env_name="MCP_MARKITDOWN_PRUNE_MAX_AGE_SEC",
+            config_value=storage_config.get("prune_max_age_sec"),
+            default=7 * 24 * 3600,
         ),
     )
 

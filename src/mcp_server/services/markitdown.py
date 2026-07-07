@@ -10,6 +10,7 @@ from urllib.request import url2pathname
 
 from mcp_server.config import MarkItDownSettings
 from mcp_server.schemas import MarkItDownConversionResult
+from mcp_server.utils.cleanup import prune_output_dir
 
 
 class MarkItDownConversionService:
@@ -19,6 +20,11 @@ class MarkItDownConversionService:
         self._settings = settings
         self._project_root = project_root.resolve()
         self._allowed_roots = tuple(root.resolve() for root in settings.allowed_roots)
+        # Eagerly instantiate MarkItDown once so repeated conversions don't pay
+        # the per-call construction overhead.
+        from markitdown import MarkItDown
+
+        self._converter = MarkItDown()
 
     async def convert_to_markdown(
         self,
@@ -42,7 +48,7 @@ class MarkItDownConversionService:
         should_save = self._settings.save_output_by_default if save_output is None else save_output
         output_resource_uri = None
         if should_save:
-            output_resource_uri = self.save_markdown_output(source_path, markdown)
+            output_resource_uri = await self.save_markdown_output(source_path, markdown)
 
         return MarkItDownConversionResult(
             source_name=source_path.name,
@@ -89,11 +95,8 @@ class MarkItDownConversionService:
         return any(source_path.is_relative_to(root) for root in self._allowed_roots)
 
     def convert_local_file(self, source_path: Path) -> str:
-        """Run MarkItDown conversion for a local file path."""
-        from markitdown import MarkItDown
-
-        converter = MarkItDown()
-        result = converter.convert_local(str(source_path))
+        """Run MarkItDown conversion for a local file path using the cached converter."""
+        result = self._converter.convert_local(str(source_path))
         markdown = getattr(result, "text_content", None)
         if markdown is None:
             markdown = getattr(result, "markdown", None)
@@ -101,15 +104,30 @@ class MarkItDownConversionService:
             markdown = str(result)
         return markdown
 
-    def save_markdown_output(self, source_path: Path, markdown: str) -> str:
-        """Persist Markdown under the configured runtime directory and return its resource URI."""
-        self._settings.output_dir.mkdir(parents=True, exist_ok=True)
-        digest = hashlib.sha256(str(source_path).encode("utf-8")).hexdigest()[:12]
-        safe_stem = _safe_filename(source_path.stem) or "document"
-        output_name = f"{safe_stem}-{digest}.md"
-        output_path = self._settings.output_dir / output_name
-        output_path.write_text(markdown, encoding="utf-8")
-        return f"markitdown://{output_name}"
+    async def save_markdown_output(self, source_path: Path, markdown: str) -> str:
+        """Persist Markdown under the configured runtime directory and return its resource URI.
+
+        File I/O runs in a thread pool to keep the event loop unblocked even for large documents.
+        After writing, an LRU prune pass runs synchronously in the same thread to keep the output
+        directory bounded.
+        """
+        def _write_and_prune() -> str:
+            self._settings.output_dir.mkdir(parents=True, exist_ok=True)
+            digest = hashlib.sha256(str(source_path).encode("utf-8")).hexdigest()[:12]
+            safe_stem = _safe_filename(source_path.stem) or "document"
+            output_name = f"{safe_stem}-{digest}.md"
+            output_path = self._settings.output_dir / output_name
+            output_path.write_text(markdown, encoding="utf-8")
+            # Prune the directory while already in the worker thread.
+            prune_output_dir(
+                self._settings.output_dir,
+                max_entries=self._settings.prune_max_entries,
+                max_age_sec=self._settings.prune_max_age_sec,
+                glob_pattern="*.md",
+            )
+            return f"markitdown://{output_name}"
+
+        return await asyncio.to_thread(_write_and_prune)
 
     def public_source_uri(self, source_path: Path) -> str:
         """Return a non-absolute source identifier suitable for MCP responses."""

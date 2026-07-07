@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -51,5 +52,5 @@ def register_render_resources(mcp: FastMCP, render_output_dir: Path) -> None:
         if not file_path.is_file():
             raise FileNotFoundError(f"Rendered file not found: {filename}")
 
-        # 4. 读取原始字节以 BlobResourceContents 形式通过 MCP 管道回传
-        return file_path.read_bytes()
+        # 4. 异步读取原始字节以 BlobResourceContents 形式通过 MCP 管道回传（避免大文件阻塞事件循环）
+        return await asyncio.to_thread(file_path.read_bytes)

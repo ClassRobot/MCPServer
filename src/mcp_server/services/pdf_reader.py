@@ -14,6 +14,13 @@ from uuid import uuid4
 import pypdf
 import pypdfium2 as pdfium
 
+from mcp_server.utils.cleanup import prune_output_dir
+
+#: Default maximum number of PDF-rendered PNG files to keep in the output directory.
+_DEFAULT_PRUNE_MAX_ENTRIES = 200
+#: Default maximum age in seconds for rendered PDF page files (3 days).
+_DEFAULT_PRUNE_MAX_AGE_SEC = 3 * 24 * 3600
+
 
 class PDFReadingService:
     """PDF 高保真渲染与结构化文本提取服务类。
@@ -21,13 +28,22 @@ class PDFReadingService:
     提供获取 PDF 页数、将特定页面栅格化渲染为 PNG 图片、以及提取页面中可搜索的纯文本等核心功能。
     """
 
-    def __init__(self, default_output_dir: Path) -> None:
+    def __init__(
+        self,
+        default_output_dir: Path,
+        prune_max_entries: int = _DEFAULT_PRUNE_MAX_ENTRIES,
+        prune_max_age_sec: float = _DEFAULT_PRUNE_MAX_AGE_SEC,
+    ) -> None:
         """初始化 PDF 阅读服务。
 
         Args:
             default_output_dir (Path): 默认生成的 PNG 渲染图像保存的目标目录。
+            prune_max_entries (int): 输出目录保留的最大文件数（LRU 淘汰）。
+            prune_max_age_sec (float): 超过此秒数的文件将被无条件删除。
         """
         self._default_output_dir = default_output_dir
+        self._prune_max_entries = prune_max_entries
+        self._prune_max_age_sec = prune_max_age_sec
         # 初始化时，递归确保输出目录在磁盘上创建就绪
         self._default_output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -129,6 +145,14 @@ class PDFReadingService:
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
         resolved_path.write_bytes(png_bytes)
 
+        # 同步触发目录剪枝（此函数已在线程池中运行，可直接调用同步清理）
+        prune_output_dir(
+            self._default_output_dir,
+            max_entries=self._prune_max_entries,
+            max_age_sec=self._prune_max_age_sec,
+            glob_pattern="*.png",
+        )
+
         return png_bytes, str(resolved_path)
 
     async def extract_pdf_text(self, pdf_path: Path, page_index: int) -> str:
@@ -153,15 +177,16 @@ class PDFReadingService:
 
     def _extract_pdf_text_sync(self, pdf_path: Path, page_index: int) -> str:
         """执行 PDF 字符流定位与文本提取的同步工作线程核心实现。"""
-        reader = pypdf.PdfReader(str(pdf_path))
-        num_pages = len(reader.pages)
-        # 强边界验证，防页码索引越界
-        if page_index < 0 or page_index >= num_pages:
-            raise IndexError(
-                f"Page index {page_index} out of bounds for PDF with {num_pages} pages."
-            )
+        with open(pdf_path, "rb") as f:
+            reader = pypdf.PdfReader(f)
+            num_pages = len(reader.pages)
+            # 强边界验证，防页码索引越界
+            if page_index < 0 or page_index >= num_pages:
+                raise IndexError(
+                    f"Page index {page_index} out of bounds for PDF with {num_pages} pages."
+                )
 
-        page = reader.pages[page_index]
-        # 调用 pypdf 内核提取布局合理的物理文本块并做空字符回退
-        text = page.extract_text()
-        return text or ""
+            page = reader.pages[page_index]
+            # 调用 pypdf 内核提取布局合理的物理文本块并做空字符回退
+            text = page.extract_text()
+            return text or ""
