@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -130,7 +130,7 @@ class SearchCacheStore:
         }
         with cache_file.open("w", encoding="utf-8") as cache_handle:
             json.dump(payload, cache_handle, ensure_ascii=False, indent=2)
-            
+
         # 写入后立即触发剪枝清理算法，保证缓存容量是有界的
         self.prune()
 
