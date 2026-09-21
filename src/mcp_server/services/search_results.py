@@ -57,22 +57,22 @@ class SearchResultFilter:
         for raw_result in raw_results:
             # 1. 净化并对齐 URL 格式，为精确去重奠定基础
             normalized_url = self._normalize_url(raw_result.url)
-            
+
             # 2. 如果开启广告拦截且当前条目被标记为广告，则予以剔除
             if filter_ads and self._settings.ads_enabled and raw_result.is_ad:
                 filtered_count += 1
                 continue
-                
+
             # 3. 严格模式拦截：若只保留自然搜索项而当前属于推荐/推广等非自然内容，则予以剔除
             if strict_mode and not raw_result.is_natural:
                 filtered_count += 1
                 continue
-                
+
             # 4. 空数据完整性检验：防止爬取到空标题或空链接引发前端渲染空白卡片
             if not raw_result.title.strip() or not normalized_url:
                 filtered_count += 1
                 continue
-                
+
             # 5. 精确去重检查：规避不同搜索引擎抓取结果集在不同源站或在合并时出现冗余
             if normalized_url in seen_urls:
                 filtered_count += 1
@@ -125,4 +125,3 @@ class SearchResultFilter:
             fragment="",
         )
         return urlunparse(normalized)
-

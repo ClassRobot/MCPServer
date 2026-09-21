@@ -106,15 +106,15 @@ def create_server(settings: ServerSettings | None = None) -> FastMCP:
         pdf_service=pdf_service,
         office_service=office_service,
     )
-    
+
     # 6. 注册所有的 MCP 协议静态与动态资源（提供严格网络资源模式文件读取）
     register_resources(
         mcp,
         query_history_service=query_history_service,
         render_output_dir=active_settings.render_output_dir,
     )
-    
+
     # 7. 注册 AI 交互提示词模板（Prompts）
     register_prompts(mcp)
-    
+
     return mcp
