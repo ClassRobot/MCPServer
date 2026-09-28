@@ -27,4 +27,3 @@ uv run alembic revision -m "add_example_table"
 1. 先改 ORM 模型，再生成或手写 migration。
 2. 非兼容变更优先采用 expand/contract 思路，不要一上来破坏旧列或旧表。
 3. 新 migration 合入前，至少验证一次空库升级与已升级库的重复执行行为。
-

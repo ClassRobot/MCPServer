@@ -79,9 +79,9 @@ class BrowserSessionManager:
         # 1. 触发过期会话的清理回收
         await self._cleanup_expired_sessions()
         playwright = await self._ensure_playwright()
-        
+
         session_headless = self._settings.headless if headless is None else headless
-        
+
         # 2. 启动 Chromium 物理子进程
         browser = await playwright.chromium.launch(headless=session_headless)
         try:
@@ -91,7 +91,7 @@ class BrowserSessionManager:
             if storage_state_path is not None:
                 # 如果传入了状态文件路径，直接在此注入 Cookie/LocalStorage 恢复登录态
                 context_kwargs["storage_state"] = storage_state_path
-                
+
             context = await browser.new_context(**context_kwargs)
             try:
                 page = await context.new_page()
@@ -104,7 +104,7 @@ class BrowserSessionManager:
 
         session_id = uuid4().hex
         timestamp = datetime.now(UTC)
-        
+
         # 3. 计入活跃会话表
         self._sessions[session_id] = ManagedBrowserSession(
             session_id=session_id,
@@ -222,7 +222,7 @@ class BrowserSessionManager:
         page = await self.get_page(session_id)
         html = await page.content()
         soup = BeautifulSoup(html, "html.parser")
-        
+
         # 1. 提炼出选定的局部 DOM 树，若未指定则作用于全页面
         scope = soup.select_one(selector) if selector else soup
         text = scope.get_text(" ", strip=True) if scope is not None else ""

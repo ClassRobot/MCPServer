@@ -145,7 +145,7 @@ def configure_logging(settings: LoggingSettings) -> None:
     # 3. 注册本地物理文件轮转处理器
     if settings.file_enabled:
         settings.file_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # 每日午夜触发日志轮转，自动加上日期后缀归档，并清理过期的旧日志文件
         file_handler = TimedRotatingFileHandler(
             filename=settings.file_path,
@@ -204,7 +204,7 @@ def configure_uvicorn_logging(settings: LoggingSettings) -> None:
         return
 
     uvicorn_log_config = deepcopy(uvicorn.config.LOGGING_CONFIG)
-    
+
     # 注入本项目的控制台键值格式化器
     uvicorn_log_config["formatters"] = {
         "console": {

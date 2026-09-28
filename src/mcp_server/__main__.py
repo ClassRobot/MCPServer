@@ -34,7 +34,7 @@ def parse_args(
     """
     settings = default_settings or load_server_settings()
     parser = argparse.ArgumentParser(description="运行 MCP 服务器主程序。")
-    
+
     # 核心通道协议参数（Stdio 模式或 HTTP 流模式）
     parser.add_argument(
         "--transport",
@@ -42,14 +42,14 @@ def parse_args(
         default="stdio",
         help="MCP 服务器所使用的传输层协议通道，默认为 stdio。",
     )
-    
+
     # HTTP 服务端绑定主机名
     parser.add_argument(
         "--host",
         default=settings.host,
         help="基于 HTTP 传输时的服务绑定监听主机地址。",
     )
-    
+
     # HTTP 服务端绑定端口
     parser.add_argument(
         "--port",
@@ -69,11 +69,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     # 1. 载入全局服务器配置并配置日志文件及轮转器
     base_settings = load_server_settings()
     configure_logging(base_settings.logging)
-    
+
     # 2. 解析传入的命令行输入，动态覆盖主机及端口号
     args = parse_args(argv=argv, default_settings=base_settings)
     server = create_server(replace(base_settings, host=args.host, port=args.port))
-    
+
     transport: TransportName = args.transport
     log_event(
         LOGGER,

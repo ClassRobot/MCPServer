@@ -93,18 +93,18 @@ class BingSearchProvider:
         parsed_results: list[RawSearchResult] = []
         for candidate in self._iter_candidates(results_root):
             classes = set(candidate.get("class", []))
-            
+
             # 1. 提取标题和目标链接
             anchor = candidate.select_one("h2 a[href]") or candidate.select_one("a[href]")
             title = anchor.get_text(" ", strip=True) if anchor is not None else ""
             url = anchor.get("href", "").strip() if anchor is not None else ""
-            
+
             # 2. 提取摘要段落
             snippet_node = candidate.select_one(".b_caption p") or candidate.select_one("p")
             snippet = snippet_node.get_text(" ", strip=True) if snippet_node is not None else None
-            
+
             source = self._infer_source(url)
-            
+
             # 3. 通过 Bing 专属样式类名确定自然结果并检查广告标签
             is_natural = "b_algo" in classes
             is_ad = self._looks_like_ad(candidate, classes)
