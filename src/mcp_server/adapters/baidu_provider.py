@@ -59,14 +59,14 @@ class BaiduSearchProvider:
             list[RawSearchResult]: 结构化候选搜索结果列表。
         """
         page = await session_manager.get_page(session_id)
-        
+
         # 1. 导航到目标搜索页，等待 DOM 内容加载完成以保证响应时效
         await page.goto(
             self.build_search_url(query),
             wait_until="domcontentloaded",
             timeout=self._settings.timeout_ms,
         )
-        
+
         try:
             # 2. 等待百度搜索结果的主容器元素 (#content_left) 附加到 DOM 中
             await page.wait_for_selector(
@@ -75,8 +75,10 @@ class BaiduSearchProvider:
                 timeout=self._settings.timeout_ms,
             )
         except PlaywrightTimeoutError as exc:
-            raise RuntimeError("百度搜索结果主容器 '#content_left' 未在超时限制内渲染完成。") from exc
-            
+            raise RuntimeError(
+                "百度搜索结果主容器 '#content_left' 未在超时限制内渲染完成。"
+            ) from exc
+
         html = await page.content()
         return self.parse_results(html)
 
@@ -97,23 +99,25 @@ class BaiduSearchProvider:
         parsed_results: list[RawSearchResult] = []
         for candidate in self._iter_candidates(results_root):
             classes = set(candidate.get("class", []))
-            
+
             # 1. 提取标题和目标跳转链接
             title_node = candidate.select_one("h3") or candidate.select_one(".t")
-            anchor = title_node.select_one("a[href]") if title_node else candidate.select_one("a[href]")
-            
+            anchor = (
+                title_node.select_one("a[href]") if title_node else candidate.select_one("a[href]")
+            )
+
             title = anchor.get_text(" ", strip=True) if anchor else ""
             url = anchor.get("href", "").strip() if anchor else ""
-            
+
             # 2. 提取摘要正文（百度不同模版类名的自适应选择器）
             snippet_node = (
-                candidate.select_one(".content-abstract") or 
-                candidate.select_one(".c-abstract") or
-                candidate.select_one(".c-span18") or
-                candidate.select_one(".c-span-all")
+                candidate.select_one(".content-abstract")
+                or candidate.select_one(".c-abstract")
+                or candidate.select_one(".c-span18")
+                or candidate.select_one(".c-span-all")
             )
             snippet = snippet_node.get_text(" ", strip=True) if snippet_node else None
-            
+
             # 3. 提取展示的源网站域名
             source_node = candidate.select_one(".c-showurl") or candidate.select_one(".g")
             site_name = source_node.get_text(" ", strip=True) if source_node else None
